@@ -1,0 +1,48 @@
+.blue-6 {
+    color: #1890ff;
+}
+#root, .basic-layout {
+    height: 100%;
+}
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+}
+
+.logo-box,
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.logo-box .logo {
+    width: 144px;
+    height: 48px;
+    background: url('../images/logo@2x.png') no-repeat center;
+    background-size: cover;
+}
+
+.logo-box .sign-out {
+    color: #1890ff;
+}
+
+.logo-box .user-name {
+    margin: 0 4px 0 10px;
+}
+.sider {
+    background: #fff;
+}
+.content {
+    padding-left: 20px;
+    padding-right: 50px;
+}
+
+.content .header-left {
+    float: left;
+}
+
+.content .header-right {
+    float: right;
+}

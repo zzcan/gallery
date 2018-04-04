@@ -1,0 +1,40 @@
+.pic-container .pic-item {
+    float: left;
+    width: 160px;
+    border: 1px solid #f0f0f0;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.pic-item .pic-box {
+    width: 100%;
+    height: 160px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.pic-box img {
+    display: block;
+    width: 100%;
+}
+
+.btns {
+    width: 100%;
+    padding: 0 4px;
+    box-sizing: border-box;
+}
+
+.btns span {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+    text-align: center;
+    cursor: pointer;
+}
+.btns span:not(:last-of-type)::after {
+    content: '|';
+    position: absolute;
+    color: #f0f0f0;
+    right: 0;
+    top: 0;
+}
