@@ -38,7 +38,21 @@ class App extends Component {
         })
     }
     handleListClick(e, id) {
-        this.setState({selectListId: id})
+        this.setState({selectListId: id});
+    }
+    handleListEnter(e, id) {
+        const { imgList } = this.state;
+        imgList.forEach(item => {
+            if(item.id === id) item.isMouseEnter = true;
+        })
+        this.setState({ imgList })
+    }
+    handleListLeave(e) {
+        const { imgList } = this.state;
+        imgList.forEach(item => {
+            item.isMouseEnter = false;
+        })
+        this.setState({ imgList })
     }
     // 获取用户信息
     getUserInfo() {
@@ -60,7 +74,7 @@ class App extends Component {
                     <div className="logo-box">
                         <div className="logo"></div>
                         <Divider type="vertical" />
-                        <span>图片管理</span>
+                        <span className="font-16">图片管理</span>
                     </div>
                     <div className="user-info">
                         {
@@ -124,7 +138,13 @@ class App extends Component {
                             {
                                 imgList.length ?
                                 imgList.map(item => (
-                                    <div className={item.id === selectListId ? 'pic-item active' : 'pic-item'} key={item.id} onClick={e => this.handleListClick(e, item.id)}>
+                                    <div 
+                                        className={item.id === selectListId ? 'pic-item active' : 'pic-item'} 
+                                        key={item.id} 
+                                        onClick={e => this.handleListClick(e, item.id)}
+                                        onMouseEnter={e => this.handleListEnter(e, item.id)}
+                                        onMouseLeave={e => this.handleListLeave(e)}
+                                    >
                                         {
                                             item.id === selectListId ?
                                                 <div className="selected" >
@@ -135,7 +155,7 @@ class App extends Component {
                                         }
                                         <div className="pic-box">
                                             <img src="https://xkdsaas.oss-cn-shanghai.aliyuncs.com/MerChant/2905/1260/1519844399969.jpg" alt="" />
-                                            <div className="preview-label">
+                                            <div className={item.isMouseEnter ? 'preview-label mouse-enter' : 'preview-label'}>
                                                 图片名称图片名称图片名称
                                                 <Icon className="preview-icon" type="search" />
                                             </div>

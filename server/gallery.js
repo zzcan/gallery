@@ -7,6 +7,11 @@ const Pic = models.getModel('pic')
 const User = models.getModel('user')
 const _filter = {'_id': 0,'__v': 0}  //自定义查询条件 过滤掉密码
 
+
+for(let i = 8;i< 16;i++) {
+    Pic.create({categoryId: 0, fileSize: 1524, path: 'https://xkdsaas.oss-cn-shanghai.aliyuncs.com/MerChant/2905/1260/1523156242627.jpg?x-oss-process=style/300', id: i, name: 'pic-' + i})
+}
+
 // 获取用户信息
 Router.get('/getUserInfo', (req, res) => {
     User.find({}, _filter).then(data => {

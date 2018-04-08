@@ -1,8 +1,12 @@
 .blue-6 {
     color: #03A9F4;
+    cursor: pointer;
 }
 .font-18 {
     font-size: 18px;
+}
+.font-16 {
+    font-size: 16px;
 }
 .color-26 {
     color: #262626;
@@ -186,11 +190,17 @@
     padding: 0 44px 0 10px;
     line-height: 36px;
     color: #fff;
-    background: rgba(0, 0, 0, .25);
+    background: #000;
+    opacity: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
     white-space: nowrap;
+    transition: all 1s;
+}
+.pic-box .preview-label.mouse-enter{
+    opacity: 1;
+    background: rgba(0, 0, 0, .25);
 }
 .pic-box .preview-label .preview-icon {
     position: absolute;
