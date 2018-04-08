@@ -14,11 +14,14 @@ const models = {
     },
     pic: {
         categoryId: Number,
-        displayName: String,
         fileSize: Number,
         path: String,
         id: Number,
         name: String
+    },
+    user: {
+        name: String,
+        avatar: String
     }
 }
 
