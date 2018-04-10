@@ -7,6 +7,8 @@ const Pic = models.getModel('pic')
 const User = models.getModel('user')
 const _filter = {'_id': 0,'__v': 0}  //自定义查询条件 过滤掉密码
 
+let cId = 1010
+let pId = 1010
 
 // 获取用户信息
 Router.get('/getUserInfo', (req, res) => {
@@ -60,10 +62,11 @@ Router.get('/getList', (req, res) => {
 // 添加分组
 Router.post('/addCategory', (req, res) => {
     const { categoryName } = req.body
-    Category.count({}, (err, count) => {
-        if(err) return res.json({code: 1, msg: '服务器出错了'})
-        Category.create({categoryName, id: count}).then(data => {
-            res.json({Code: 0, Data: {categoryName, id: count}, Msg: 'success'})
+    Category.find({}).then(aData => {
+        let id = aData.length ? aData[aData.length - 1].id : -1
+        id++
+        Category.create({categoryName, id}).then(data => {
+            res.json({Code: 0, Data: {categoryName, id}, Msg: 'success'})
         }).catch(err => {
             res.json({code: 1, msg: '服务器出错了'})
         })
@@ -73,9 +76,23 @@ Router.post('/addCategory', (req, res) => {
 // 修改名称
 Router.post('/reName', (req, res) => {
     const { id, name, type } = req.body
-    if(type == 'category') {
+    if(type === 'category') {
         Category.update({id}, {categoryName: name}).then(data => {
-            res.json({Code: 0, Data: {categoryName: name, id}, Msg: 'success'})
+            if(data.ok === 1) {
+                res.json({Code: 0, Data: {categoryName: name, id}, Msg: 'success'})
+            }else {
+                res.json({code: 1, msg: '服务器出错了'})
+            }
+        }).catch(err => {
+            res.json({code: 1, msg: '服务器出错了'})
+        })
+    }else if(type === 'file') {
+        Pic.update({ id }, { name }).then(data => {
+            if(data.ok === 1) {
+                res.json({Code: 0, Data: {name, id}, Msg: 'success'})
+            }else {
+                res.json({code: 1, msg: '服务器出错了'})
+            }
         }).catch(err => {
             res.json({code: 1, msg: '服务器出错了'})
         })
@@ -86,10 +103,56 @@ Router.post('/reName', (req, res) => {
 Router.post('/delCategory', (req, res) => {
     const { categoryId } = req.body
     Category.remove({ id: categoryId }).then(data => {
-        console.log(data)
-        res.json({Code: 0, Data: {categoryName: name, id}, Msg: 'success'})
+        if(data.ok === 1) {
+            res.json({Code: 0, Data: true, Msg: 'success'})
+        }else {
+            res.json({code: 1, msg: '服务器出错了'})
+        }
     }).catch(err => {
         res.json({code: 1, msg: '服务器出错了'})
+    })
+})
+
+// 移动图片至新分组
+Router.post('/moveCategory', (req, res) => {
+    const { categoryId, id } = req.body
+    Pic.update({ id }, { categoryId }).then(data => {
+        if(data.ok === 1) {
+            res.json({Code: 0, Data: true, Msg: 'success'})
+        }else {
+            res.json({code: 1, msg: '服务器出错了'})
+        }
+    }).catch(err => {
+        res.json({code: 1, msg: '服务器出错了'})
+    })
+})
+
+// 删除图片
+Router.post('/delPic', (req, res) => {
+    const { ids } = req.body
+    Pic.remove({ id: {$in: ids} }).then(data => {
+        console.log(data)
+        if(data.ok === 1) {
+            res.json({Code: 0, Data: true, Msg: 'success'})
+        }else {
+            res.json({code: 1, msg: '服务器出错了'})
+        }
+    }).catch(err => {
+        res.json({code: 1, msg: '服务器出错了'})
+    })
+})
+
+// 上传网络图片
+Router.post('/uploadWebImg', (req, res) => {
+    const { imgSrc } = req.body
+    Pic.find({}).then(aData => {
+        let id = aData.length ? aData[aData.length - 1].id : -1
+        id++
+        Pic.create({ categoryId: 0, fileSize: '1550', path: imgSrc, id }).then(data => {
+            res.json({Code: 0, Data: true, Msg: 'success'})
+        }).catch(err => {
+            res.json({code: 1, msg: '服务器出错了'})
+        })
     })
 })
 

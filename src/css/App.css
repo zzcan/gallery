@@ -296,7 +296,7 @@
     height: 470px;
 }
 
-.upload-modal .row {
+.upload-modal .row, .link-modal .row {
     display: flex;
     align-items: center;
     margin-bottom: 20px;
