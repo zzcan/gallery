@@ -1,4 +1,5 @@
 /* 隐藏滚动条 */
+
 ::-webkit-scrollbar {
     width: 0px
 }
@@ -23,6 +24,14 @@
 #root,
 .basic-layout {
     height: 100%;
+}
+
+.basic-spin,
+.list-spin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .header {
@@ -172,7 +181,10 @@
     cursor: pointer;
 }
 
+/* 图片列表 */
+
 .pic-container {
+    position: relative;
     display: flex;
     justify-content: flex-start;
     flex-wrap: wrap;
@@ -224,6 +236,7 @@
 .pic-box img {
     display: block;
     width: 100%;
+    height: 100%;
 }
 
 .pic-box .preview-label {
@@ -282,13 +295,30 @@
     top: 0;
 }
 
+/* 弹窗 */
+
+/* 图片预览 */
+
+.preview-modal {
+    height: 500px;
+}
+
+.preview-modal .ant-modal-content .ant-modal-body {
+    height: 100%;
+}
+.preview-modal img{
+    width: 100%;
+    height: 100%;
+}
+
 /* 图片上传 */
 
 .upload-modal {
     height: 600px;
 }
 
-.upload-modal .ant-modal-content {
+.upload-modal .ant-modal-content,
+.preview-modal .ant-modal-content {
     height: 100%;
 }
 
@@ -296,7 +326,8 @@
     height: 470px;
 }
 
-.upload-modal .row, .link-modal .row {
+.upload-modal .row,
+.link-modal .row {
     display: flex;
     align-items: center;
     margin-bottom: 20px;
@@ -304,4 +335,20 @@
 
 .upload-modal .row .label {
     margin-right: 8px;
+}
+.upload-modal .upload-box {
+    display: flex;
+}
+/* 空数据 */
+
+.list-empty-box {
+    width: 100%;
+    text-align: center;
+}
+
+.list-empty-box .list-empty-img {
+    width: 104px;
+    height: 96px;
+    margin: 84px auto 20px;
+    background: url('../images/list-empty-img.png') no-repeat;
 }

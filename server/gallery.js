@@ -115,8 +115,8 @@ Router.post('/delCategory', (req, res) => {
 
 // 移动图片至新分组
 Router.post('/moveCategory', (req, res) => {
-    const { categoryId, id } = req.body
-    Pic.update({ id }, { categoryId }).then(data => {
+    const { categoryId, ids } = req.body
+    Pic.updateMany({ id: {$in: ids} }, { categoryId }).then(data => {
         if(data.ok === 1) {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }else {
@@ -131,7 +131,6 @@ Router.post('/moveCategory', (req, res) => {
 Router.post('/delPic', (req, res) => {
     const { ids } = req.body
     Pic.remove({ id: {$in: ids} }).then(data => {
-        console.log(data)
         if(data.ok === 1) {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }else {
@@ -148,7 +147,7 @@ Router.post('/uploadWebImg', (req, res) => {
     Pic.find({}).then(aData => {
         let id = aData.length ? aData[aData.length - 1].id : -1
         id++
-        Pic.create({ categoryId: 0, fileSize: '1550', path: imgSrc, id }).then(data => {
+        Pic.create({ categoryId: 0, fileSize: '1550', path: imgSrc, id, name: `网络图片${id}` }).then(data => {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }).catch(err => {
             res.json({code: 1, msg: '服务器出错了'})

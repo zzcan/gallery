@@ -14,6 +14,7 @@ import {
     Upload,
     message,
     Select,
+    Spin,
 } from 'antd';
 import axios from 'axios';
 import { CopyToClipboard } from 'react-copy-to-clipboard';   //复制到剪切板插件
@@ -24,6 +25,9 @@ class App extends Component {
     constructor(props) {
         super(props)
         this.state = {
+            loading: true,  //全局loading
+            listLoading: false, //列表加载loading
+
             user: {},
             categories: [],  //分组列表
 
@@ -44,6 +48,8 @@ class App extends Component {
             renameModalVisible: false,  //重命名弹窗
             linkModalVisible: false,  //复制图片链接弹窗
             moveCateModalVisible: false, //移动分组弹窗
+            previewModalVisible: false, //图片预览弹窗
+            previewImage: '', //要预览的图片
         }
     }
     componentWillMount() {
@@ -59,11 +65,15 @@ class App extends Component {
                     categories: res.data.Data,
                     selectedCategory: { categoryName, id }
                 });
+                return this.getList({ categoryId: id, pageIndex: 1, pageSize: 10 });
             }
-        })
-        this.getList({ categoryId: 0, pageIndex: 1, pageSize: 10 }).then(res => {
+        }).then(res => {
             if (res.data.Code === 0) {
-                this.setState({ imgList: res.data.Data.data, imgTotal: res.data.Data.total });
+                this.setState({
+                    loading: false,
+                    imgList: res.data.Data.data,
+                    imgTotal: res.data.Data.total,
+                });
             }
         })
     }
@@ -72,20 +82,28 @@ class App extends Component {
      * @param {选中的分组id} id 
      */
     handleMenuChange(id) {
-        const { categories, pageSize } = this.state;
-        this.setState({ selectedCategory: categories.filter(item => item.id === id)[0] });
+        const { categories, pageSize, selectedCategory } = this.state;
+        if (selectedCategory.id === id) return;
+        this.setState({
+            selectedCategory: categories.filter(item => item.id === id)[0],
+            listLoading: true,
+        });
         this.getList({ categoryId: id, pageIndex: 1, pageSize }).then(res => {
+            this.setState({ listLoading: false });
             if (res.data.Code === 0) {
-                this.setState({ imgList: res.data.Data.data, imgTotal: res.data.Data.total });
+                this.setState({
+                    imgList: res.data.Data.data,
+                    imgTotal: res.data.Data.total,
+                });
             }
         })
     }
     //添加分组
     handleAddCategory(e) {
         const { iptCategoryName } = this.state;
-        if (!iptCategoryName) {
+        if (!iptCategoryName || iptCategoryName.length > 6) {
             this.handleCancel('addModal');
-            message.error('分组名不能为空!');
+            message.error(!iptCategoryName ? '分组名不能为空!' : '输入的分组名长度不能超过6位!');
             return;
         }
         this.setState({ confirmLoading: true });
@@ -93,8 +111,11 @@ class App extends Component {
             if (res.data.Code === 0) {
                 this.handleCancel('addModal');
                 this.setState({
+                    selectedCategory: res.data.Data,
                     categories: [...this.state.categories, res.data.Data],
-                    confirmLoading: false
+                    confirmLoading: false,
+                    imgList: [],
+                    imgTotal: 0
                 })
             }
         })
@@ -162,15 +183,43 @@ class App extends Component {
             onOk: () => {
                 this.delCategory({ categoryId: selectedCategory.id }).then(res => {
                     if (res.data.Code === 0) {
-                        this.setState({ 
+                        this.setState({
                             categories: categories.filter(v => v.id !== selectedCategory.id),
-                            selectedCategory: categories[0]
+                            selectedCategory: categories[0],
+                            listLoading: true,
                         });
                         modalRef.destroy();
+                        return this.getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: 10 });
+                    }
+                }).then(res => {
+                    if (res.data.Code === 0) {
+                        this.setState({
+                            imgList: res.data.Data.data,
+                            imgTotal: res.data.Data.total,
+                            listLoading: false,
+                        });
                     }
                 })
             },
         });
+    }
+    // 搜索图片  当前分组下搜索图片
+    handleSearchPic(value) {
+        const { selectedCategory } = this.state;        
+        if(!value) {
+            message.error('请输入图片名称再搜索!');
+            return;
+        }
+        this.setState({ listLoading: true });
+        this.getList({categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: 10}).then(res => {
+            if(res.data.Code === 0) {
+                this.setState({
+                    imgList: res.data.Data.data,
+                    imgTotal: res.data.Data.total,
+                    listLoading: false,
+                });
+            }
+        })
     }
     /**
      * 处理各种弹窗输入框内容  
@@ -231,26 +280,29 @@ class App extends Component {
     }
     //移动图片至新分组弹窗确定按钮回调
     handleMoveCate() {
-        const { movedCategoryId, picId, selectedCategory, pageIndex, pageSize } = this.state;
+        //moveCateType 移动分组类型  singlePic为单个图片移动分组    batchMove 为批量移动分组
+        const { movedCategoryId, picId, moveCateType, selectedCategory, selectListIds } = this.state;
         if (movedCategoryId === null || movedCategoryId === undefined) {
             this.handleCancel('moveCateModal');
             message.error('请选择分组!');
             return;
         }
-        if(movedCategoryId === selectedCategory.id) {
+        if (movedCategoryId === selectedCategory.id) {
             this.handleCancel('moveCateModal');
             message.error('已在该分组内!');
             return;
         }
         this.setState({ confirmLoading: true });
-        this.moveCategory({ categoryId: movedCategoryId, id: picId }).then(res => {
+        this.moveCategory({ categoryId: movedCategoryId, ids: moveCateType === 'singlePic' ? [picId] : selectListIds }).then(res => {
             if (res.data.Code === 0) {
-                this.getList({ categoryId: selectedCategory.id, pageIndex, pageSize }).then(res => {
+                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: 10 }).then(res => {
                     this.setState({
                         imgList: res.data.Data.data,
                         imgTotal: res.data.Data.total,
                         confirmLoading: false,
                         moveCateModalVisible: false,
+                        selectListIds: [],
+                        allChecked: false,
                     });
                 })
             }
@@ -292,12 +344,14 @@ class App extends Component {
      * 显示弹窗
      * @param {弹窗类型} type 
      */
-    showModal({ type, renameType = null, picId = null, selectedPicLink = null }) {
+    showModal({ type, renameType = null, picId = null, selectedPicLink = null, moveCateType = null, previewImage = '' }) {
         this.setState({
             [`${type}Visible`]: true,
             renameType,
             picId,
-            selectedPicLink
+            selectedPicLink,
+            moveCateType,
+            previewImage,
         });
     }
     /**
@@ -338,17 +392,18 @@ class App extends Component {
     }
     // 上传网络图片
     handleUploadWebImg() {
-        const { webImg, pageSize } = this.state;
-        if(!webImg) {
+        const { webImg, pageSize, categories } = this.state;
+        if (!webImg) {
             message.error('请输入需要提取的网络图片!');
             return;
         }
-        this.uploadWebImg({imgSrc: webImg}).then(res => {
-            if(res.data.Code === 0) {
+        this.uploadWebImg({ imgSrc: webImg }).then(res => {
+            if (res.data.Code === 0) {
                 this.getList({ categoryId: 0, pageIndex: 1, pageSize }).then(res => {
                     if (res.data.Code === 0) {
                         message.success('上传成功!');
                         this.setState({
+                            selectedCategory: categories[0],
                             imgList: res.data.Data.data,
                             imgTotal: res.data.Data.total,
                             pageIndex: 1,
@@ -359,9 +414,20 @@ class App extends Component {
             }
         })
     }
-    // 文件状态改变回调
-    handleUploadChange(obj) {
-        console.log(obj);
+    // 图片上传前的回调
+    handleBeforeUpload(file, fileList) {
+        this.setState({fileList: [...this.state.fileList, file]});
+        console.log(fileList)
+        return false;
+    }
+    handleUploadChange({ file,fileList,event }) {
+        // console.log(fileList)
+        // console.log(file)
+        // console.log(event)
+        // this.setState({ fileList })
+    }
+    handleCustomRequest({onProgress, onError, onSuccess, file, action }) {
+        console.log(file)
     }
     // 获取用户信息
     getUserInfo() {
@@ -413,15 +479,17 @@ class App extends Component {
     delPic(options) {
         return axios.post('/gallery/delPic', options);
     }
-      /**
-     * 上传网络图片
-     * @param {imgSrc 网络图片路径} options 
-     */
+    /**
+   * 上传网络图片
+   * @param {imgSrc 网络图片路径} options 
+   */
     uploadWebImg(options) {
         return axios.post('/gallery/uploadWebImg', options);
     }
     render() {
         const {
+            loading,
+            listLoading,
             categories,
             user,
             pageIndex,
@@ -435,13 +503,19 @@ class App extends Component {
             renameModalVisible,
             linkModalVisible,
             moveCateModalVisible,
+            previewModalVisible,
+            previewImage,
             confirmLoading,
             fileList,
             allChecked,
             selectedPicLink,
+            iptCategoryName,
+            iptRename,
+            webImg
         } = this.state;
         return (
             <Layout className="basic-layout">
+                <Spin className="basic-spin" spinning={loading} size="large" />
                 <Header className="header">
                     <div className="logo-box">
                         <div className="logo"></div>
@@ -461,9 +535,13 @@ class App extends Component {
                 </Header>
                 <Layout>
                     <Sider className="sider">
-                        <Menu className="menu" defaultSelectedKeys={['0']} mode="inline" onClick={({ key }) => {
-                            this.handleMenuChange(Number(key))
-                        }}>
+                        <Menu
+                            className="menu"
+                            defaultSelectedKeys={['0']}
+                            selectedKeys={selectedCategory ? [`${selectedCategory.id}`] : ['0']}
+                            mode="inline"
+                            onClick={({ key }) => { this.handleMenuChange(Number(key)) }}
+                        >
                             {
                                 categories.map(v => (
                                     <Menu.Item className="menu-item" key={v.id + ''}>{v.categoryName}</Menu.Item>
@@ -482,7 +560,7 @@ class App extends Component {
                             onCancel={() => this.handleCancel('addModal')}
                             afterClose={() => this.handleModalClose('iptCategoryName')}
                         >
-                            <Input placeholder="不超过6个字" onChange={e => this.handleInput('iptCategoryName', e.target.value)} />
+                            <Input placeholder="不超过6个字" value={iptCategoryName} onChange={e => this.handleInput('iptCategoryName', e.target.value)} />
                         </Modal>
                         <div className="capacity">
                             <Progress type="dashboard" percent={75} width={48} />
@@ -501,17 +579,17 @@ class App extends Component {
                                 <Button type="primary" className="search-btn" onClick={e => this.showModal({ type: 'uploadModal' })}>上传图片</Button>
                                 <Input.Search
                                     placeholder="请输入图片名称"
-                                    onSearch={value => console.log(value)}
+                                    onSearch={value => this.handleSearchPic(value)}
                                     style={{ width: 346 }}
                                 />
                             </div>
                         </div>
                         <div className="oprate-tab clearfix">
-                            <Checkbox checked={allChecked} onChange={(e) => this.handleAllChecked(e)}>全选</Checkbox>
+                            <Checkbox checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
                             {
                                 allChecked ?
                                     <div className="opration-text">
-                                        <span>修改分组</span>
+                                        <span onClick={e => this.showModal({ type: 'moveCateModal', moveCateType: 'batchMove' })}>修改分组</span>
                                         <Divider type="vertical" />
                                         <span onClick={() => this.handleDeletePic()}>删除</span>
                                     </div>
@@ -521,6 +599,7 @@ class App extends Component {
 
                         </div>
                         <div className="pic-container">
+                            {<Spin className="list-spin" spinning={listLoading} size="large" />}
                             {
                                 imgList.length ?
                                     imgList.map(item => (
@@ -540,7 +619,10 @@ class App extends Component {
                                             }
                                             <div className="pic-box" onClick={e => this.handleListClick(item.id)}>
                                                 <img src={item.path} alt="" />
-                                                <div className={item.isMouseEnter ? 'preview-label mouse-enter' : 'preview-label'}>
+                                                <div
+                                                    className={item.isMouseEnter ? 'preview-label mouse-enter' : 'preview-label'}
+                                                    onClick={e => {e.stopPropagation();this.showModal({type: 'previewModal', previewImage: item.path})}}
+                                                >
                                                     {item.name}
                                                     <Icon className="preview-icon" type="search" />
                                                 </div>
@@ -548,13 +630,20 @@ class App extends Component {
                                             <div className="btns">
                                                 <span onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span>
                                                 <span onClick={e => this.showModal({ type: 'linkModal', selectedPicLink: item.path })}>链接</span>
-                                                <span onClick={e => this.showModal({ type: 'moveCateModal', picId: item.id })}>分组</span>
+                                                <span onClick={e => this.showModal({ type: 'moveCateModal', picId: item.id, moveCateType: 'singlePic' })}>分组</span>
                                                 <span onClick={e => this.handleDeletePic([item.id])}>删除</span>
                                             </div>
                                         </div>
                                     ))
                                     :
-                                    null
+                                    imgTotal === null
+                                        ?
+                                        null
+                                        :
+                                        <div className="list-empty-box">
+                                            <div className="list-empty-img"></div>
+                                            <div>该分类下数据为空~</div>
+                                        </div>
                             }
                         </div>
                         <Pagination
@@ -572,6 +661,15 @@ class App extends Component {
                         />
                     </Content>
                 </Layout>
+                {/* 图片预览 */}
+                <Modal
+                    className="preview-modal"
+                    visible={previewModalVisible}
+                    footer={null}
+                    onCancel={() => this.handleCancel('previewModal')}
+                >
+                    <img alt="" src={previewImage} />
+                </Modal>
                 {/* 分组或图片重命名弹窗 */}
                 <Modal title="修改名称:"
                     visible={renameModalVisible}
@@ -580,7 +678,7 @@ class App extends Component {
                     onCancel={() => this.handleCancel('renameModal')}
                     afterClose={() => this.handleModalClose('iptRename')}
                 >
-                    <Input placeholder="请输入名称" onChange={e => this.handleInput('iptRename', e.target.value)} />
+                    <Input placeholder="请输入名称" value={iptRename} onChange={e => this.handleInput('iptRename', e.target.value)} />
                 </Modal>
                 {/* 复制图片链接弹窗 */}
                 <Modal
@@ -625,18 +723,18 @@ class App extends Component {
                 <Modal
                     title="本地上传"
                     visible={uploadModalVisible}
-                    onOk={() => console.log(111)}
                     confirmLoading={confirmLoading}
                     onCancel={() => this.handleCancel('uploadModal')}
                     className="upload-modal"
                     width="888px"
-                    afterClose={() => this.handleModalClose('webImg')}
+                    afterClose={() => { this.handleModalClose('webImg'); }}
                 >
                     <div className="row">
                         <span className="label">网络图片:</span>
                         <Input
                             style={{ width: 400, marginRight: 6 }}
-                            onChange={e => this.setState({webImg: e.target.value})}
+                            value={webImg}
+                            onChange={e => this.setState({ webImg: e.target.value })}
                             placeholder="请添加网络图片地址"
                         />
                         <Button onClick={this.handleUploadWebImg.bind(this)}>提取</Button>
@@ -644,16 +742,19 @@ class App extends Component {
                     <div className="row">
                         <span className="label">选择商品:</span>
                         <Upload
-                            action="//jsonplaceholder.typicode.com/posts/"
+                            className="upload-box"
+                            action=""
                             listType="picture-card"
                             fileList={fileList}
+                            showUploadList={{showPreviewIcon: false}}
+                            customRequest={this.handleCustomRequest.bind(this)}
                             onChange={this.handleUploadChange.bind(this)}
                         >
                             {
-                                fileList.length >= 3 ?
+                                fileList.length >= 10 ?
                                     null
                                     :
-                                    <Icon type="plus" />
+                                    <div><Icon type="plus" /></div>
                             }
                         </Upload>
                     </div>
