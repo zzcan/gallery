@@ -46,10 +46,10 @@ class App extends Component {
             uploadModalVisible: false,  //上传图片弹窗
             addModalVisible: false,     //添加分组弹窗
             renameModalVisible: false,  //重命名弹窗
-            linkModalVisible: false,  //复制图片链接弹窗
             moveCateModalVisible: false, //移动分组弹窗
             previewModalVisible: false, //图片预览弹窗
             previewImage: '', //要预览的图片
+            isLimit: false,
         }
     }
     componentWillMount() {
@@ -205,14 +205,14 @@ class App extends Component {
     }
     // 搜索图片  当前分组下搜索图片
     handleSearchPic(value) {
-        const { selectedCategory } = this.state;        
-        if(!value) {
+        const { selectedCategory } = this.state;
+        if (!value) {
             message.error('请输入图片名称再搜索!');
             return;
         }
         this.setState({ listLoading: true });
-        this.getList({categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: 10}).then(res => {
-            if(res.data.Code === 0) {
+        this.getList({ categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: 10 }).then(res => {
+            if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
                     imgTotal: res.data.Data.total,
@@ -271,7 +271,6 @@ class App extends Component {
     }
     //复制图片链接
     handleCopyLink(text, result) {
-        this.handleCancel('linkModal');
         message.success('复制链接成功!');
     }
     //移动图片至新分组的弹窗中 分组选择框选中回调
@@ -392,18 +391,17 @@ class App extends Component {
     }
     // 上传网络图片
     handleUploadWebImg() {
-        const { webImg, pageSize, categories } = this.state;
+        const { webImg, pageSize, selectedCategory } = this.state;
         if (!webImg) {
             message.error('请输入需要提取的网络图片!');
             return;
         }
         this.uploadWebImg({ imgSrc: webImg }).then(res => {
             if (res.data.Code === 0) {
-                this.getList({ categoryId: 0, pageIndex: 1, pageSize }).then(res => {
+                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize }).then(res => {
                     if (res.data.Code === 0) {
                         message.success('上传成功!');
                         this.setState({
-                            selectedCategory: categories[0],
                             imgList: res.data.Data.data,
                             imgTotal: res.data.Data.total,
                             pageIndex: 1,
@@ -416,18 +414,73 @@ class App extends Component {
     }
     // 图片上传前的回调
     handleBeforeUpload(file, fileList) {
-        this.setState({fileList: [...this.state.fileList, file]});
-        console.log(fileList)
-        return false;
+        // 图片上传前验证其大小
+        const MAXFILESIZE = 5;
+        const isLtMax = file.size / 1024 / 1024 < MAXFILESIZE;
+        if (!isLtMax) {
+            message.error(`文件大小超过${MAXFILESIZE}M限制`);
+        }
+        return isLtMax;
     }
-    handleUploadChange({ file,fileList,event }) {
-        // console.log(fileList)
-        // console.log(file)
-        // console.log(event)
-        // this.setState({ fileList })
+    // 图片上传改变的状态
+    handleUploadChange({ fileList }) {
+        // let fileList = e.fileList.map(file => {
+        //     if (file.response) {
+        //         //上传结束之后会调用的方法
+        //         if (file.response.Code === 0) {
+        //             return {...file, id: file.response.Data.id}
+        //         }
+        //     }
+        //     return file;
+        // });
+        this.setState({ fileList });
     }
-    handleCustomRequest({onProgress, onError, onSuccess, file, action }) {
-        console.log(file)
+    // 已上传的图片移除
+    handleImgRemove(file) {
+        const { response } = file;
+        if (response && response.Code === 0) {
+            this.delPic({ ids: [response.Data.id] }).then(res => {
+                if (res.data.Code === 0) {
+                    console.log('pic delete success')
+                }
+            })
+        }
+    }
+    // 上传图片弹窗取消按钮操作
+    handleUploadModalClose(type) {
+        const { fileList, selectedCategory } = this.state;
+        if (type === 'cancel') {
+            let ids = [];
+            fileList.forEach(file => {
+                if (file.response && file.response.Code === 0) ids.push(file.response.Data.id);
+            })
+            if (ids.length > 0) {
+                this.delPic({ ids }).then(res => {
+                    if (res.data.Code === 0) {
+                        console.log('pics delete success')
+                    }
+                });
+            }
+        }
+        this.setState({
+            fileList: [],
+            uploadModalVisible: false,
+            allChecked: false,
+            selectListIds: [],
+        });
+        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: 10 }).then(res => {
+            if (res.data.Code === 0) {
+                this.setState({
+                    imgList: res.data.Data.data,
+                    imgTotal: res.data.Data.total,
+                });
+            }
+        })
+    }
+    // 图片替换
+    handleReplacePic({file}) {
+        // 替换图片
+        // todo
     }
     // 获取用户信息
     getUserInfo() {
@@ -501,7 +554,6 @@ class App extends Component {
             uploadModalVisible,
             addModalVisible,
             renameModalVisible,
-            linkModalVisible,
             moveCateModalVisible,
             previewModalVisible,
             previewImage,
@@ -621,17 +673,25 @@ class App extends Component {
                                                 <img src={item.path} alt="" />
                                                 <div
                                                     className={item.isMouseEnter ? 'preview-label mouse-enter' : 'preview-label'}
-                                                    onClick={e => {e.stopPropagation();this.showModal({type: 'previewModal', previewImage: item.path})}}
+                                                    onClick={e => { e.stopPropagation(); this.showModal({ type: 'previewModal', previewImage: item.path, selectedPicLink: item.path }) }}
                                                 >
                                                     {item.name}
                                                     <Icon className="preview-icon" type="search" />
                                                 </div>
                                             </div>
                                             <div className="btns">
-                                                <span onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span>
-                                                <span onClick={e => this.showModal({ type: 'linkModal', selectedPicLink: item.path })}>链接</span>
-                                                <span onClick={e => this.showModal({ type: 'moveCateModal', picId: item.id, moveCateType: 'singlePic' })}>分组</span>
-                                                <span onClick={e => this.handleDeletePic([item.id])}>删除</span>
+                                                <span className="btn-item" onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span>
+                                                <Upload
+                                                    className="btn-item"
+                                                    showUploadList={false}
+                                                    style={{lineHeight: 1}}
+                                                    action="/upload"
+                                                    onChange={this.handleReplacePic.bind(this)}
+                                                >
+                                                    <span >替换</span>
+                                                </Upload>
+                                                <span className="btn-item" onClick={e => this.showModal({ type: 'moveCateModal', picId: item.id, moveCateType: 'singlePic' })}>分组</span>
+                                                <span className="btn-item" onClick={e => this.handleDeletePic([item.id])}>删除</span>
                                             </div>
                                         </div>
                                     ))
@@ -661,7 +721,7 @@ class App extends Component {
                         />
                     </Content>
                 </Layout>
-                {/* 图片预览 */}
+                {/* 图片预览 复制链接 下载 */}
                 <Modal
                     className="preview-modal"
                     visible={previewModalVisible}
@@ -669,6 +729,17 @@ class App extends Component {
                     onCancel={() => this.handleCancel('previewModal')}
                 >
                     <img alt="" src={previewImage} />
+                    <div className="row">
+                        <Input defaultValue={selectedPicLink} disabled />
+                        <CopyToClipboard
+                            style={{ marginLeft: 10 }}
+                            text={selectedPicLink}
+                            onCopy={(text, result) => this.handleCopyLink(text, result)}
+                        >
+                            <Button>复制</Button>
+                        </CopyToClipboard>
+                        <Button href={selectedPicLink} download={selectedPicLink} style={{ marginLeft: 8 }}>下载</Button>
+                    </div>
                 </Modal>
                 {/* 分组或图片重命名弹窗 */}
                 <Modal title="修改名称:"
@@ -679,25 +750,6 @@ class App extends Component {
                     afterClose={() => this.handleModalClose('iptRename')}
                 >
                     <Input placeholder="请输入名称" value={iptRename} onChange={e => this.handleInput('iptRename', e.target.value)} />
-                </Modal>
-                {/* 复制图片链接弹窗 */}
-                <Modal
-                    className="link-modal"
-                    title="链接:"
-                    visible={linkModalVisible}
-                    footer={null}
-                    onCancel={() => this.handleCancel('linkModal')}
-                >
-                    <div className="row">
-                        <Input defaultValue={selectedPicLink} disabled />
-                        <CopyToClipboard
-                            style={{ marginLeft: 10 }}
-                            text={selectedPicLink}
-                            onCopy={(text, result) => this.handleCopyLink(text, result)}
-                        >
-                            <Button>复制</Button>
-                        </CopyToClipboard>
-                    </div>
                 </Modal>
                 {/* 图片移动分组弹窗 */}
                 <Modal title="分组:"
@@ -724,7 +776,8 @@ class App extends Component {
                     title="本地上传"
                     visible={uploadModalVisible}
                     confirmLoading={confirmLoading}
-                    onCancel={() => this.handleCancel('uploadModal')}
+                    onCancel={() => this.handleUploadModalClose('cancel')}
+                    onOk={() => this.handleUploadModalClose('confirm')}
                     className="upload-modal"
                     width="888px"
                     afterClose={() => { this.handleModalClose('webImg'); }}
@@ -739,16 +792,20 @@ class App extends Component {
                         />
                         <Button onClick={this.handleUploadWebImg.bind(this)}>提取</Button>
                     </div>
-                    <div className="row">
-                        <span className="label">选择商品:</span>
+                    <div className="clearfix" style={{ height: '100%' }}>
+                        <span style={{ float: 'left', marginRight: 8, height: '100%' }}>选择图片:</span>
                         <Upload
                             className="upload-box"
-                            action=""
+                            action="/upload"
                             listType="picture-card"
+                            multiple
+                            name={selectedCategory ? selectedCategory.id + '': '0'}
+                            accept="image/jpg,image/jpeg,image/png,image/bmp"
                             fileList={fileList}
-                            showUploadList={{showPreviewIcon: false}}
-                            customRequest={this.handleCustomRequest.bind(this)}
+                            showUploadList={{ showPreviewIcon: false }}
+                            beforeUpload={this.handleBeforeUpload.bind(this)}
                             onChange={this.handleUploadChange.bind(this)}
+                            onRemove={this.handleImgRemove.bind(this)}
                         >
                             {
                                 fileList.length >= 10 ?
@@ -757,8 +814,9 @@ class App extends Component {
                                     <div><Icon type="plus" /></div>
                             }
                         </Upload>
+                        <div style={{ marginLeft: 66, color: '#bfbfbf' }}>仅支持gif，jpeg，png，bmp4种格式，大小不超过5.0MB</div>
                     </div>
-                    <div style={{ marginLeft: 66, color: '#bfbfbf' }}>仅支持gif，jpeg，png，bmp4种格式，大小不超过5.0MB</div>
+
                 </Modal>
             </Layout>
         );
