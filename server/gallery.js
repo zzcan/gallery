@@ -43,7 +43,9 @@ Router.get('/getList', (req, res) => {
     categoryId = Number(categoryId)
     pageIndex = Number(pageIndex)
     pageSize = Number(pageSize)
-    const query = Pic.find({categoryId, searchName}, _filter)
+
+    const queryOption = searchName ? {categoryId, name: searchName} : {categoryId}
+    const query = Pic.find(queryOption, _filter)
     
     query.skip((pageIndex - 1) * pageSize)
         .limit(pageSize)
@@ -143,11 +145,11 @@ Router.post('/delPic', (req, res) => {
 
 // 上传网络图片
 Router.post('/uploadWebImg', (req, res) => {
-    const { imgSrc } = req.body
+    const { imgSrc, categoryId } = req.body
     Pic.find({}).then(aData => {
         let id = aData.length ? aData[aData.length - 1].id : -1
         id++
-        Pic.create({ categoryId: 0, fileSize: '1550', path: imgSrc, id, name: `网络图片${id}` }).then(data => {
+        Pic.create({ categoryId, fileSize: '1550', path: imgSrc, id, name: `网络图片${id}` }).then(data => {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }).catch(err => {
             res.json({code: 1, msg: '服务器出错了'})

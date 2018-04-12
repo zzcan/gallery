@@ -206,10 +206,6 @@ class App extends Component {
     // 搜索图片  当前分组下搜索图片
     handleSearchPic(value) {
         const { selectedCategory } = this.state;
-        if (!value) {
-            message.error('请输入图片名称再搜索!');
-            return;
-        }
         this.setState({ listLoading: true });
         this.getList({ categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: 10 }).then(res => {
             if (res.data.Code === 0) {
@@ -396,7 +392,7 @@ class App extends Component {
             message.error('请输入需要提取的网络图片!');
             return;
         }
-        this.uploadWebImg({ imgSrc: webImg }).then(res => {
+        this.uploadWebImg({ imgSrc: webImg, categoryId: selectedCategory.id }).then(res => {
             if (res.data.Code === 0) {
                 this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize }).then(res => {
                     if (res.data.Code === 0) {
@@ -479,8 +475,18 @@ class App extends Component {
     }
     // 图片替换
     handleReplacePic({file}) {
-        // 替换图片
-        // todo
+        if(file.response && file.response.Code === 0) {
+            message.success('图片替换成功！')
+            let { imgList } = this.state;
+            const { id } = file.response.Data;
+            imgList = imgList.map(v => {
+                if(v.id === id) return {...v, ...file.response.Data};
+                return v;
+            });
+            this.setState({imgList})
+        }else if(file.response && file.response.Code !== 0) {
+            message.success('图片替换失败！')
+        }
     }
     // 获取用户信息
     getUserInfo() {
@@ -682,10 +688,13 @@ class App extends Component {
                                             <div className="btns">
                                                 <span className="btn-item" onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span>
                                                 <Upload
+                                                    style={{lineHeight: 1}}
                                                     className="btn-item"
                                                     showUploadList={false}
-                                                    style={{lineHeight: 1}}
+                                                    accept="image/jpg,image/jpeg,image/png,image/bmp"
+                                                    name={`&${item.id}`}
                                                     action="/upload"
+                                                    beforeUpload={this.handleBeforeUpload.bind(this)}
                                                     onChange={this.handleReplacePic.bind(this)}
                                                 >
                                                     <span >替换</span>
@@ -709,7 +718,6 @@ class App extends Component {
                         <Pagination
                             style={{ float: 'right' }}
                             showTotal={total => `共${total}条记录`}
-                            hideOnSinglePage
                             showQuickJumper
                             showSizeChanger
                             defaultCurrent={1}

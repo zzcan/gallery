@@ -40,15 +40,31 @@ app.post('/upload', jfum.postHandler.bind(jfum), function (req, res) {
                 if (err) res.json({code: 1, msg: '服务器出错了'})
                 fs.writeFile(destPath, data, err => {
                     if (err) res.json({code: 1, msg: '服务器出错了'})
-                    Pic.find({}).then(aData => {
-                        let id = aData.length ? aData[aData.length - 1].id : -1
-                        id++
-                        Pic.create({ categoryId: +file.field, fileSize: file.size, path: imgPath, id, name: file.name}).then(data => {
-                            res.json({Code: 0, Data: {...file, path: imgPath, id}, Msg: 'The file has been saved!'})
+                    //图片上传
+                    if(file.field.indexOf('&') === -1) {
+                        Pic.find({}).then(aData => {
+                            let id = aData.length ? aData[aData.length - 1].id : -1
+                            id++
+                            Pic.create({ categoryId: +file.field, fileSize: file.size, path: imgPath, id, name: file.name}).then(data => {
+                                file.path = imgPath
+                                file.id = id
+                                res.json({Code: 0, Data: file, Msg: 'The file has been saved!'})
+                            }).catch(err => {
+                                res.json({code: 1, msg: '服务器出错了'})
+                            })
+                        }) 
+                    }else {
+                        //图片替换
+                        const ids = file.field.split("&")
+                        let id = +ids[1]
+                        Pic.update({id}, {name: file.name, path: imgPath, fileSize: file.size}).then(data => {
+                            console.log(data)
+                            res.json({Code: 0, Data: {id, name: file.name, path: imgPath, fileSize: file.size}, Msg: 'The pic has been replaced success!'})
                         }).catch(err => {
                             res.json({code: 1, msg: '服务器出错了'})
                         })
-                    })
+                    }
+                    
                 })
             })
         })
