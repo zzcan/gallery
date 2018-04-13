@@ -189,6 +189,7 @@ class App extends Component {
                             listLoading: true,
                         });
                         modalRef.destroy();
+                        message.success('删除分组成功！')
                         return this.getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: 10 });
                     }
                 }).then(res => {
@@ -269,6 +270,12 @@ class App extends Component {
     handleCopyLink(text, result) {
         message.success('复制链接成功!');
     }
+    // 批量移动按钮点击回调
+    handleAllMove() {
+        const { selectListIds } = this.state;
+        if(!selectListIds.length) return message.error('请选择需要移动分组的图片');
+        this.showModal({ type: 'moveCateModal', moveCateType: 'batchMove' })
+    }
     //移动图片至新分组的弹窗中 分组选择框选中回调
     handleCateChange(value) {
         this.setState({ movedCategoryId: value });
@@ -309,6 +316,8 @@ class App extends Component {
      */
     handleDeletePic(ids) {
         const { selectListIds, selectedCategory, pageIndex, pageSize } = this.state;
+        // 批量删除且并未有任何图片选中
+        if(!ids && !selectListIds.length) return message.error('请选择需要删除的图片');
         const modalRef = Modal.confirm({
             title: '确定删除图片吗?',
             content: '若删除，目前已使用该图片的相关业务会受影响!',
@@ -474,17 +483,17 @@ class App extends Component {
         })
     }
     // 图片替换
-    handleReplacePic({file}) {
-        if(file.response && file.response.Code === 0) {
+    handleReplacePic({ file }) {
+        if (file.response && file.response.Code === 0) {
             message.success('图片替换成功！')
             let { imgList } = this.state;
             const { id } = file.response.Data;
             imgList = imgList.map(v => {
-                if(v.id === id) return {...v, ...file.response.Data};
+                if (v.id === id) return { ...v, ...file.response.Data };
                 return v;
             });
-            this.setState({imgList})
-        }else if(file.response && file.response.Code !== 0) {
+            this.setState({ imgList })
+        } else if (file.response && file.response.Code !== 0) {
             message.success('图片替换失败！')
         }
     }
@@ -647,7 +656,7 @@ class App extends Component {
                             {
                                 allChecked ?
                                     <div className="opration-text">
-                                        <span onClick={e => this.showModal({ type: 'moveCateModal', moveCateType: 'batchMove' })}>修改分组</span>
+                                        <span onClick={this.handleAllMove.bind(this)}>修改分组</span>
                                         <Divider type="vertical" />
                                         <span onClick={() => this.handleDeletePic()}>删除</span>
                                     </div>
@@ -688,7 +697,7 @@ class App extends Component {
                                             <div className="btns">
                                                 <span className="btn-item" onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span>
                                                 <Upload
-                                                    style={{lineHeight: 1}}
+                                                    style={{ lineHeight: 1 }}
                                                     className="btn-item"
                                                     showUploadList={false}
                                                     accept="image/jpg,image/jpeg,image/png,image/bmp"
@@ -715,18 +724,24 @@ class App extends Component {
                                         </div>
                             }
                         </div>
-                        <Pagination
-                            style={{ float: 'right' }}
-                            showTotal={total => `共${total}条记录`}
-                            showQuickJumper
-                            showSizeChanger
-                            defaultCurrent={1}
-                            pageSize={pageSize}
-                            current={pageIndex}
-                            total={imgTotal}
-                            onChange={(page, pageSize) => console.log(page, pageSize)}
-                            onShowSizeChange={(current, size) => this.handleSizeChange(current, size)}
-                        />
+                        {
+                            imgList.length ?
+                                <Pagination
+                                    style={{ float: 'right' }}
+                                    showTotal={total => `共${total}条记录`}
+                                    showQuickJumper
+                                    showSizeChanger
+                                    defaultCurrent={1}
+                                    pageSize={pageSize}
+                                    current={pageIndex}
+                                    total={imgTotal}
+                                    onChange={(page, pageSize) => console.log(page, pageSize)}
+                                    onShowSizeChange={(current, size) => this.handleSizeChange(current, size)}
+                                />
+                                :
+                                null
+                        }
+
                     </Content>
                 </Layout>
                 {/* 图片预览 复制链接 下载 */}
@@ -807,7 +822,7 @@ class App extends Component {
                             action="/upload"
                             listType="picture-card"
                             multiple
-                            name={selectedCategory ? selectedCategory.id + '': '0'}
+                            name={selectedCategory ? selectedCategory.id + '' : '0'}
                             accept="image/jpg,image/jpeg,image/png,image/bmp"
                             fileList={fileList}
                             showUploadList={{ showPreviewIcon: false }}

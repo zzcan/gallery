@@ -106,7 +106,13 @@ Router.post('/delCategory', (req, res) => {
     const { categoryId } = req.body
     Category.remove({ id: categoryId }).then(data => {
         if(data.ok === 1) {
-            res.json({Code: 0, Data: true, Msg: 'success'})
+            Pic.remove({categoryId}).then(d => {
+                if(d.ok === 1) {
+                    res.json({Code: 0, Data: true, Msg: 'success'})
+                }else {
+                    res.json({code: 1, msg: '服务器出错了'})
+                }
+            })
         }else {
             res.json({code: 1, msg: '服务器出错了'})
         }
