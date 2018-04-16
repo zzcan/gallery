@@ -355,3 +355,9 @@
     margin: 84px auto 20px;
     background: url('../images/list-empty-img.png') no-repeat;
 }
+
+/* popover */
+.popover-btns {
+    margin-top: 10px;
+    text-align: right;
+}

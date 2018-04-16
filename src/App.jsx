@@ -15,10 +15,12 @@ import {
     message,
     Select,
     Spin,
+    Popover
 } from 'antd';
 import axios from 'axios';
 import { CopyToClipboard } from 'react-copy-to-clipboard';   //复制到剪切板插件
 import './css/App.css';
+import './config';
 const { Header, Sider, Content } = Layout;
 
 class App extends Component {
@@ -50,6 +52,8 @@ class App extends Component {
             previewModalVisible: false, //图片预览弹窗
             previewImage: '', //要预览的图片
             isLimit: false,
+
+            renamePopover: false,  //图片改名popover
         }
     }
     componentWillMount() {
@@ -273,7 +277,7 @@ class App extends Component {
     // 批量移动按钮点击回调
     handleAllMove() {
         const { selectListIds } = this.state;
-        if(!selectListIds.length) return message.error('请选择需要移动分组的图片');
+        if (!selectListIds.length) return message.error('请选择需要移动分组的图片');
         this.showModal({ type: 'moveCateModal', moveCateType: 'batchMove' })
     }
     //移动图片至新分组的弹窗中 分组选择框选中回调
@@ -317,7 +321,7 @@ class App extends Component {
     handleDeletePic(ids) {
         const { selectListIds, selectedCategory, pageIndex, pageSize } = this.state;
         // 批量删除且并未有任何图片选中
-        if(!ids && !selectListIds.length) return message.error('请选择需要删除的图片');
+        if (!ids && !selectListIds.length) return message.error('请选择需要删除的图片');
         const modalRef = Modal.confirm({
             title: '确定删除图片吗?',
             content: '若删除，目前已使用该图片的相关业务会受影响!',
@@ -578,7 +582,8 @@ class App extends Component {
             selectedPicLink,
             iptCategoryName,
             iptRename,
-            webImg
+            webImg,
+            renamePopover,
         } = this.state;
         return (
             <Layout className="basic-layout">
@@ -695,7 +700,25 @@ class App extends Component {
                                                 </div>
                                             </div>
                                             <div className="btns">
-                                                <span className="btn-item" onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span>
+                                                {/* <span className="btn-item" onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span> */}
+                                                <Popover
+                                                    className="renamePopover"
+                                                    content={
+                                                        <div>
+                                                            <Input placeholder="请输入名称" value={iptRename} onChange={e => this.handleInput('iptRename', e.target.value)} />
+                                                            <div className="popover-btns">
+                                                                <Button onClick={() => {this.setState({renamePopover: false})}}>取消</Button>
+                                                                <Button type="primary" style={{marginLeft: 10}}>确定</Button>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    title="修改名称"
+                                                    trigger="click"
+                                                    visible={renamePopover}
+                                                    onVisibleChange={visible => this.setState({renamePopover: visible})}
+                                                >
+                                                    <span className="btn-item">改名</span>
+                                                </Popover>
                                                 <Upload
                                                     style={{ lineHeight: 1 }}
                                                     className="btn-item"
