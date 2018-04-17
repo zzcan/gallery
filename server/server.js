@@ -15,7 +15,7 @@ const Pic = models.getModel('pic')
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json())
-app.use('/gallery', galleryRouter)
+app.use('/image', galleryRouter)
 
 app.options('/upload', jfum.optionsHandler.bind(jfum))
 app.post('/upload', jfum.postHandler.bind(jfum), function (req, res) {

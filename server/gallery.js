@@ -91,10 +91,8 @@ Router.post('/categoryRename', (req, res) => {
 })
 // 修改图片名称
 Router.post('/picRename', (req, res) => {
-    const { ids, name } = req.body
-    const newIds = ids.includes(',') ? ids.split(',') : [+ids]
-    console.log(newIds)
-    Pic.update({ id: {$in: newIds} }, { name }).then(data => {
+    const { id, name } = req.body
+    Pic.update({ id }, { name }).then(data => {
         if(data.ok === 1) {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }else {
@@ -142,6 +140,7 @@ Router.post('/moveCategory', (req, res) => {
 // 删除图片
 Router.post('/delPic', (req, res) => {
     const { ids } = req.body
+    console.log(ids)
     Pic.remove({ id: {$in: ids} }).then(data => {
         if(data.ok === 1) {
             res.json({Code: 0, Data: true, Msg: 'success'})
