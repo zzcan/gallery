@@ -47,7 +47,6 @@ class App extends Component {
 
             uploadModalVisible: false,  //上传图片弹窗
             addModalVisible: false,     //添加分组弹窗
-            renameModalVisible: false,  //重命名弹窗
             moveCateModalVisible: false, //移动分组弹窗
             previewModalVisible: false, //图片预览弹窗
             previewImage: '', //要预览的图片
@@ -124,47 +123,55 @@ class App extends Component {
             }
         })
     }
-    /**
-     * 处理重命名
-     * renameType为重命名类型 picId为单个图片重命名的图片id
-     */
-    handleRename() {
-        const { renameType, iptRename, selectedCategory, categories, imgList, picId, selectListIds } = this.state;
-        if (!iptRename || (selectedCategory.id === 0 && renameType === 'category')) {
-            this.handleCancel('renameModal');
-            message.error(!iptRename ? '修改的名称不能为空!' : '未分组不能更改名称!');
+    // 分组重命名
+    handleCateRename() {
+        const { iptCateName, selectedCategory, categories } = this.state;
+        if (!iptCateName && selectedCategory.id === 0) {
+            message.error(!iptCateName ? '修改的名称不能为空!' : '未分组不能更改名称!');
             return;
         }
         this.setState({ confirmLoading: true });
-        const options = {
-            category: {
-                id: selectedCategory.id,
-                name: iptRename,
-                type: renameType,
-            },
-            file: {
-                id: picId === null ? selectListIds[0] : picId,
-                name: iptRename,
-                type: renameType,
-            }
-        }
-        this.reName(options[renameType]).then(res => {
+        this.reName({ id: selectedCategory.id, name: iptCateName }).then(res => {
             if (res.data.Code === 0) {
-                this.handleCancel('renameModal');
-                if (renameType === 'category') {
-                    const { id, categoryName } = res.data.Data;
-                    categories.forEach(v => {
-                        if (v.id === id) v.categoryName = categoryName
-                    })
-                    this.setState({ categories })
-                } else if (renameType === 'file') {
-                    const { id, name } = res.data.Data;
-                    imgList.forEach(v => {
-                        if (v.id === id) v.name = name;
-                    })
-                    this.setState({ imgList })
-                }
-                this.setState({ confirmLoading: false })
+                const { id, categoryName } = res.data.Data;
+                categories.forEach(v => {
+                    if (v.id === id) v.categoryName = categoryName
+                })
+                this.setState({
+                    categories,
+                    confirmLoading: false
+                })
+            }
+        })
+    }
+    // popover取消按钮
+    handleCancelPopover(type, ipt) {
+        this.setState({
+            [`${type}Popover`]: false,
+            [ipt]: ''
+        })
+    }
+    // 图片重命名
+    renamePics(type, id) {
+        const { selectListIds, iptPicName, imgList } = this.state;
+        if (!iptPicName) return message.error('请输入图片名!');
+        let ids = type ? id + '' : selectListIds.join(',');
+        this.setState({ confirmLoading: true });
+        this.picRename({ ids, name: iptPicName }).then(res => {
+            if (res.data.Code === 0) {
+                message.success('修改图片名称成功!');
+                let arr = type ? [id] : selectListIds;
+                imgList.forEach(v => {
+                    if (arr.includes(v.id)) {
+                        v.name = iptPicName
+                    }
+                })
+                this.setState({
+                    imgList,
+                    renamePopover: false,
+                    iptPicName: '',
+                    confirmLoading: false,
+                })
             }
         })
     }
@@ -274,20 +281,14 @@ class App extends Component {
     handleCopyLink(text, result) {
         message.success('复制链接成功!');
     }
-    // 批量移动按钮点击回调
-    handleAllMove() {
-        const { selectListIds } = this.state;
-        if (!selectListIds.length) return message.error('请选择需要移动分组的图片');
-        this.showModal({ type: 'moveCateModal', moveCateType: 'batchMove' })
-    }
     //移动图片至新分组的弹窗中 分组选择框选中回调
     handleCateChange(value) {
         this.setState({ movedCategoryId: value });
     }
     //移动图片至新分组弹窗确定按钮回调
     handleMoveCate() {
-        //moveCateType 移动分组类型  singlePic为单个图片移动分组    batchMove 为批量移动分组
-        const { movedCategoryId, picId, moveCateType, selectedCategory, selectListIds } = this.state;
+        const { movedCategoryId, selectedCategory, selectListIds } = this.state;
+        if (!selectListIds.length) return message.error('请选择需要移动分组的图片');
         if (movedCategoryId === null || movedCategoryId === undefined) {
             this.handleCancel('moveCateModal');
             message.error('请选择分组!');
@@ -299,7 +300,7 @@ class App extends Component {
             return;
         }
         this.setState({ confirmLoading: true });
-        this.moveCategory({ categoryId: movedCategoryId, ids: moveCateType === 'singlePic' ? [picId] : selectListIds }).then(res => {
+        this.moveCategory({ categoryId: movedCategoryId, ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
                 this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: 10 }).then(res => {
                     this.setState({
@@ -318,10 +319,10 @@ class App extends Component {
      * 删除图片
      * @param {存在传进来的ids则表示单个图片的删除} ids 
      */
-    handleDeletePic(ids) {
+    handleDeletePic() {
         const { selectListIds, selectedCategory, pageIndex, pageSize } = this.state;
         // 批量删除且并未有任何图片选中
-        if (!ids && !selectListIds.length) return message.error('请选择需要删除的图片');
+        if (!selectListIds.length) return message.error('请选择需要删除的图片');
         const modalRef = Modal.confirm({
             title: '确定删除图片吗?',
             content: '若删除，目前已使用该图片的相关业务会受影响!',
@@ -333,7 +334,7 @@ class App extends Component {
             },
             onOk: () => {
                 modalRef.destroy();
-                this.delPic({ ids: ids || selectListIds }).then(res => {
+                this.delPic({ ids: selectListIds.join(',') }).then(res => {
                     if (res.data.Code === 0) {
                         message.success('删除图片成功!');
                         this.getList({ categoryId: selectedCategory.id, pageIndex, pageSize }).then(res => {
@@ -352,13 +353,10 @@ class App extends Component {
      * 显示弹窗
      * @param {弹窗类型} type 
      */
-    showModal({ type, renameType = null, picId = null, selectedPicLink = null, moveCateType = null, previewImage = '' }) {
+    showModal({ type,selectedPicLink = null, previewImage = '' }) {
         this.setState({
             [`${type}Visible`]: true,
-            renameType,
-            picId,
             selectedPicLink,
-            moveCateType,
             previewImage,
         });
     }
@@ -524,11 +522,18 @@ class App extends Component {
         return axios.post('/gallery/addCategory', options);
     }
     /**
-     * 修改分组名或图片名
-     * @param {id, name, type} options 
+     * 修改分组名
+     * @param {id, name} options 
      */
-    reName(options) {
-        return axios.post('/gallery/reName', options);
+    categoryRename(options) {
+        return axios.post('/gallery/categoryRename', options);
+    }
+    /**
+    * 修改分组名
+    * @param {ids,name} options 
+    */
+    picRename(options) {
+        return axios.post('/gallery/picRename', options);
     }
     /**
      * 删除分组
@@ -572,7 +577,6 @@ class App extends Component {
             selectedCategory,
             uploadModalVisible,
             addModalVisible,
-            renameModalVisible,
             moveCateModalVisible,
             previewModalVisible,
             previewImage,
@@ -581,7 +585,7 @@ class App extends Component {
             allChecked,
             selectedPicLink,
             iptCategoryName,
-            iptRename,
+            iptPicName,
             webImg,
             renamePopover,
         } = this.state;
@@ -644,7 +648,7 @@ class App extends Component {
                         <div className="content-header clearfix">
                             <div className="header-left">
                                 <span className="font-18 color-26">{selectedCategory ? selectedCategory.categoryName : ''}</span>
-                                <span className="blue-6 rename" onClick={() => this.showModal({ type: 'renameModal', renameType: 'category' })}>重命名</span>
+                                <span className="blue-6 rename">重命名</span>
                                 <span className="blue-6" onClick={() => this.handleDeleteCategory()}>删除分组</span>
                             </div>
                             <div className="header-right">
@@ -657,13 +661,13 @@ class App extends Component {
                             </div>
                         </div>
                         <div className="oprate-tab clearfix">
-                            <Checkbox checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
+                            <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
                             {
                                 allChecked ?
                                     <div className="opration-text">
-                                        <span onClick={this.handleAllMove.bind(this)}>修改分组</span>
+                                        <span onClick={() => {this.showModal({type: 'moveCateModal'})}}>修改分组</span>
                                         <Divider type="vertical" />
-                                        <span onClick={() => this.handleDeletePic()}>删除</span>
+                                        <span onClick={this.handleDeletePic.bind(this)}>删除</span>
                                     </div>
                                     :
                                     null
@@ -693,29 +697,26 @@ class App extends Component {
                                                 <img src={item.path} alt="" />
                                                 <div
                                                     className={item.isMouseEnter ? 'preview-label mouse-enter' : 'preview-label'}
-                                                    onClick={e => { e.stopPropagation(); this.showModal({ type: 'previewModal', previewImage: item.path, selectedPicLink: item.path }) }}
                                                 >
                                                     {item.name}
-                                                    <Icon className="preview-icon" type="search" />
                                                 </div>
                                             </div>
                                             <div className="btns">
-                                                {/* <span className="btn-item" onClick={e => this.showModal({ type: 'renameModal', renameType: 'file', picId: item.id })}>改名</span> */}
                                                 <Popover
                                                     className="renamePopover"
                                                     content={
                                                         <div>
-                                                            <Input placeholder="请输入名称" value={iptRename} onChange={e => this.handleInput('iptRename', e.target.value)} />
+                                                            <Input placeholder="请输入名称" value={iptPicName} onChange={e => this.handleInput('iptPicName', e.target.value)} />
                                                             <div className="popover-btns">
-                                                                <Button onClick={() => {this.setState({renamePopover: false})}}>取消</Button>
-                                                                <Button type="primary" style={{marginLeft: 10}}>确定</Button>
+                                                                <Button size="small" onClick={() => { this.handleCancelPopover('rename', 'iptPicName') }}>取消</Button>
+                                                                <Button size="small" loading={confirmLoading} onClick={() => { this.renamePics(true, item.id) }} type="primary" style={{ marginLeft: 10 }}>确定</Button>
                                                             </div>
                                                         </div>
                                                     }
                                                     title="修改名称"
                                                     trigger="click"
                                                     visible={renamePopover}
-                                                    onVisibleChange={visible => this.setState({renamePopover: visible})}
+                                                    onVisibleChange={visible => this.setState({ renamePopover: visible })}
                                                 >
                                                     <span className="btn-item">改名</span>
                                                 </Popover>
@@ -729,10 +730,16 @@ class App extends Component {
                                                     beforeUpload={this.handleBeforeUpload.bind(this)}
                                                     onChange={this.handleReplacePic.bind(this)}
                                                 >
-                                                    <span >替换</span>
+                                                    <span>替换</span>
                                                 </Upload>
-                                                <span className="btn-item" onClick={e => this.showModal({ type: 'moveCateModal', picId: item.id, moveCateType: 'singlePic' })}>分组</span>
-                                                <span className="btn-item" onClick={e => this.handleDeletePic([item.id])}>删除</span>
+                                                <CopyToClipboard
+                                                    className="btn-item"
+                                                    text={item.path}
+                                                    onCopy={(text, result) => this.handleCopyLink(text, result)}
+                                                >
+                                                    <span>复制</span>
+                                                </CopyToClipboard>
+                                                <span className="btn-item" onClick={() => {this.showModal({ type: 'previewModal', previewImage: item.path, selectedPicLink: item.path })}}>查看</span>
                                             </div>
                                         </div>
                                     ))
@@ -777,25 +784,8 @@ class App extends Component {
                     <img alt="" src={previewImage} />
                     <div className="row">
                         <Input defaultValue={selectedPicLink} disabled />
-                        <CopyToClipboard
-                            style={{ marginLeft: 10 }}
-                            text={selectedPicLink}
-                            onCopy={(text, result) => this.handleCopyLink(text, result)}
-                        >
-                            <Button>复制</Button>
-                        </CopyToClipboard>
                         <Button href={selectedPicLink} download={selectedPicLink} style={{ marginLeft: 8 }}>下载</Button>
                     </div>
-                </Modal>
-                {/* 分组或图片重命名弹窗 */}
-                <Modal title="修改名称:"
-                    visible={renameModalVisible}
-                    onOk={() => this.handleRename()}
-                    confirmLoading={confirmLoading}
-                    onCancel={() => this.handleCancel('renameModal')}
-                    afterClose={() => this.handleModalClose('iptRename')}
-                >
-                    <Input placeholder="请输入名称" value={iptRename} onChange={e => this.handleInput('iptRename', e.target.value)} />
                 </Modal>
                 {/* 图片移动分组弹窗 */}
                 <Modal title="分组:"

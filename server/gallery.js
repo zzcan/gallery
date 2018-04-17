@@ -1,3 +1,4 @@
+
 const express = require('express')
 const Router = express.Router()
 const models = require('./model')
@@ -75,30 +76,33 @@ Router.post('/addCategory', (req, res) => {
     })
 })
 
-// 修改名称
-Router.post('/reName', (req, res) => {
-    const { id, name, type } = req.body
-    if(type === 'category') {
-        Category.update({id}, {categoryName: name}).then(data => {
-            if(data.ok === 1) {
-                res.json({Code: 0, Data: {categoryName: name, id}, Msg: 'success'})
-            }else {
-                res.json({code: 1, msg: '服务器出错了'})
-            }
-        }).catch(err => {
+// 修改分组名称
+Router.post('/categoryRename', (req, res) => {
+    const { id, name } = req.body
+    Category.update({id}, {categoryName: name}).then(data => {
+        if(data.ok === 1) {
+            res.json({Code: 0, Data: {categoryName: name, id}, Msg: 'success'})
+        }else {
             res.json({code: 1, msg: '服务器出错了'})
-        })
-    }else if(type === 'file') {
-        Pic.update({ id }, { name }).then(data => {
-            if(data.ok === 1) {
-                res.json({Code: 0, Data: {name, id}, Msg: 'success'})
-            }else {
-                res.json({code: 1, msg: '服务器出错了'})
-            }
-        }).catch(err => {
+        }
+    }).catch(err => {
+        res.json({code: 1, msg: '服务器出错了'})
+    })
+})
+// 修改图片名称
+Router.post('/picRename', (req, res) => {
+    const { ids, name } = req.body
+    const newIds = ids.includes(',') ? ids.split(',') : [+ids]
+    console.log(newIds)
+    Pic.update({ id: {$in: newIds} }, { name }).then(data => {
+        if(data.ok === 1) {
+            res.json({Code: 0, Data: true, Msg: 'success'})
+        }else {
             res.json({code: 1, msg: '服务器出错了'})
-        })
-    }
+        }
+    }).catch(err => {
+        res.json({code: 1, msg: '服务器出错了'})
+    })
 })
 
 // 删除分组
@@ -124,7 +128,7 @@ Router.post('/delCategory', (req, res) => {
 // 移动图片至新分组
 Router.post('/moveCategory', (req, res) => {
     const { categoryId, ids } = req.body
-    Pic.updateMany({ id: {$in: ids} }, { categoryId }).then(data => {
+    Pic.updateMany({ id: {$in: ids.split(',')} }, { categoryId }).then(data => {
         if(data.ok === 1) {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }else {
