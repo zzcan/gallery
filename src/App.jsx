@@ -111,12 +111,11 @@ class App extends Component {
         this.setState({ categories })
     }
     //菜单鼠标离开状态
-    handleMenuItemMleave(id) {
+    handleMenuItemMleave() {
         const { categories } = this.state;
         categories.forEach(v => {
-            if (v.id === id) {
-                v.menuMouseEnter = false;
-            }
+            v.menuMouseEnter = false;
+            v.popoverVisible = false;
         })
         this.setState({ categories })
     }
@@ -145,20 +144,24 @@ class App extends Component {
     // 分组重命名
     handleCateRename(id) {
         const { iptCateName, categories } = this.state;
-        if (!iptCateName && id === 0) {
+        if (!iptCateName || id === 0) {
             message.error(!iptCateName ? '修改的名称不能为空!' : '未分组不能更改名称!');
             return;
         }
         this.setState({ confirmLoading: true });
-        this.reName({ id, name: iptCateName }).then(res => {
+        this.categoryRename({ id, name: iptCateName }).then(res => {
             if (res.data.Code === 0) {
                 const { id, categoryName } = res.data.Data;
                 categories.forEach(v => {
-                    if (v.id === id) v.categoryName = categoryName
+                    if (v.id === id) {
+                        v.categoryName = categoryName;
+                        v.popoverVisible = false;
+                    }
                 })
                 this.setState({
                     categories,
-                    confirmLoading: false
+                    confirmLoading: false,
+                    iptCateName: '',
                 })
             }
         })
@@ -189,21 +192,23 @@ class App extends Component {
                 message.success('修改图片名称成功!');
                 imgList.forEach(v => {
                     if (v.id === id) {
-                        v.name = iptPicName
+                        v.name = iptPicName;
+                        v.popoverVisible = false;
                     }
                 })
                 this.setState({
                     imgList,
                     iptPicName: '',
+
                     confirmLoading: false,
                 })
             }
         })
     }
     // 删除分组
-    handleDeleteCategory() {
-        const { selectedCategory, categories } = this.state;
-        if (selectedCategory.id === 0) {
+    handleDeleteCategory(id) {
+        const { categories } = this.state;
+        if (id === 0) {
             message.error('未分组不能删除!');
             return;
         }
@@ -217,10 +222,10 @@ class App extends Component {
                 modalRef.destroy();
             },
             onOk: () => {
-                this.delCategory({ categoryId: selectedCategory.id }).then(res => {
+                this.delCategory({ categoryId: id }).then(res => {
                     if (res.data.Code === 0) {
                         this.setState({
-                            categories: categories.filter(v => v.id !== selectedCategory.id),
+                            categories: categories.filter(v => v.id !== id),
                             selectedCategory: categories[0],
                             listLoading: true,
                         });
@@ -676,12 +681,12 @@ class App extends Component {
                                     <Menu.Item
                                         className="menu-item" key={v.id + ''}
                                         onMouseEnter={() => this.handleMenuItemHover(v.id)}
-                                        onMouseLeave={() => this.handleMenuItemMleave(v.id)}
+                                        onMouseLeave={() => this.handleMenuItemMleave()}
                                     >
                                         {v.categoryName}
                                         {
                                             v.menuMouseEnter ?
-                                                <div style={{ float: 'right' }}>
+                                                <div style={{ float: 'right' }} onClick={e => e.stopPropagation()}>
                                                     <Popover
                                                         className="renamePopover"
                                                         content={
@@ -700,10 +705,10 @@ class App extends Component {
                                                     >
                                                         <Icon type="edit" />
                                                     </Popover>
-                                                    <Icon type="delete" />
+                                                    <Icon type="delete" onClick={() => this.handleDeleteCategory(v.id)} />
                                                 </div>
                                                 :
-                                                <span style={{ float: 'right' }}></span>
+                                                <span style={{ float: 'right' }}>{v.count}</span>
                                         }
                                     </Menu.Item>
                                 ))
@@ -733,8 +738,6 @@ class App extends Component {
                         <div className="content-header clearfix">
                             <div className="header-left">
                                 <span className="font-18 color-26">{selectedCategory ? selectedCategory.categoryName : ''}</span>
-                                <span className="blue-6 rename">重命名</span>
-                                <span className="blue-6" onClick={() => this.handleDeleteCategory()}>删除分组</span>
                             </div>
                             <div className="header-right">
                                 <Button type="primary" className="search-btn" onClick={e => this.showModal({ type: 'uploadModal' })}>上传图片</Button>
@@ -745,20 +748,41 @@ class App extends Component {
                                 />
                             </div>
                         </div>
-                        <div className="oprate-tab clearfix">
-                            <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
-                            {
-                                allChecked ?
-                                    <div className="opration-text">
-                                        <span onClick={() => { this.showModal({ type: 'moveCateModal' }) }}>修改分组</span>
-                                        <Divider type="vertical" />
-                                        <span onClick={this.handleDeletePic.bind(this)}>删除</span>
+                        {
+                            imgList.length ? 
+                            <div className="oprate-tab clearfix">
+                                <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
+                                {
+                                    allChecked ?
+                                        <div className="opration-text">
+                                            <span onClick={() => { this.showModal({ type: 'moveCateModal' }) }}>修改分组</span>
+                                            <Divider type="vertical" />
+                                            <span onClick={this.handleDeletePic.bind(this)}>删除</span>
+                                        </div>
+                                        :
+                                        null
+                                }
+                                <div className="list-sort">
+                                    <div className="time-sort">
+                                        <span>上传时间</span>
+                                        <span className="sort-icon">
+                                            <Icon type="caret-up" onClick={e => console.log('time-up')} />
+                                            <Icon type="caret-down" onClick={e => console.log('time-down')}/>
+                                        </span>
                                     </div>
-                                    :
-                                    null
-                            }
-
-                        </div>
+                                    <div className="name-sort">
+                                        <span>图片名称</span>
+                                        <span className="sort-icon">
+                                            <Icon type="caret-up" onClick={e => console.log('name-up')}/>
+                                            <Icon type="caret-down" onClick={e => console.log('name-down')}/>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            :
+                            null
+                        }
+                        
                         <div className="pic-container">
                             {<Spin className="list-spin" spinning={listLoading} size="large" />}
                             {
@@ -780,52 +804,52 @@ class App extends Component {
                                             }
                                             <div className="pic-box" onClick={e => this.handleListClick(item.id)}>
                                                 <img src={item.path} alt="" />
-                                                <div
-                                                    className={item.isMouseEnter ? 'preview-label mouse-enter' : 'preview-label'}
-                                                >
-                                                    {item.name}
-                                                </div>
                                             </div>
-                                            <div className="btns">
-                                                <Popover
-                                                    className="renamePopover"
-                                                    content={
-                                                        <div>
-                                                            <Input placeholder="请输入名称" value={iptPicName} onChange={e => this.handleInput('iptPicName', e.target.value)} />
-                                                            <div className="popover-btns">
-                                                                <Button size="small" onClick={() => { this.handleMenuCancelPopover(item.id) }}>取消</Button>
-                                                                <Button size="small" loading={confirmLoading} onClick={() => { this.renamePics(item.id) }} type="primary" style={{ marginLeft: 10 }}>确定</Button>
+                                            {
+                                                item.isMouseEnter ?
+                                                <div className="btns">
+                                                    <Popover
+                                                        className="renamePopover"
+                                                        content={
+                                                            <div>
+                                                                <Input placeholder="请输入名称" value={iptPicName} onChange={e => this.handleInput('iptPicName', e.target.value)} />
+                                                                <div className="popover-btns">
+                                                                    <Button size="small" onClick={() => { this.handleListCancelPopover(item.id) }}>取消</Button>
+                                                                    <Button size="small" loading={confirmLoading} onClick={() => { this.renamePics(item.id) }} type="primary" style={{ marginLeft: 10 }}>确定</Button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    }
-                                                    title="修改名称"
-                                                    trigger="click"
-                                                    visible={item.popoverVisible}
-                                                    onVisibleChange={visible => this.handleListPopover(visible, item.id)}
-                                                >
-                                                    <span className="btn-item">改名</span>
-                                                </Popover>
-                                                <Upload
-                                                    style={{ lineHeight: 1 }}
-                                                    className="btn-item"
-                                                    showUploadList={false}
-                                                    accept="image/jpg,image/jpeg,image/png,image/bmp"
-                                                    name={`&${item.id}`}
-                                                    action="/upload"
-                                                    beforeUpload={this.handleBeforeUpload.bind(this)}
-                                                    onChange={this.handleReplacePic.bind(this)}
-                                                >
-                                                    <span>替换</span>
-                                                </Upload>
-                                                <CopyToClipboard
-                                                    className="btn-item"
-                                                    text={item.path}
-                                                    onCopy={(text, result) => this.handleCopyLink(text, result)}
-                                                >
-                                                    <span>复制</span>
-                                                </CopyToClipboard>
-                                                <span className="btn-item" onClick={() => { this.showModal({ type: 'previewModal', previewImage: item.path, selectedPicLink: item.path }) }}>查看</span>
-                                            </div>
+                                                        }
+                                                        title="修改名称"
+                                                        trigger="click"
+                                                        visible={item.popoverVisible}
+                                                        onVisibleChange={visible => this.handleListPopover(visible, item.id)}
+                                                    >
+                                                        <span className="btn-item">改名</span>
+                                                    </Popover>
+                                                    <Upload
+                                                        style={{ lineHeight: 1 }}
+                                                        className="btn-item"
+                                                        showUploadList={false}
+                                                        accept="image/jpg,image/jpeg,image/png,image/bmp"
+                                                        name={`&${item.id}`}
+                                                        action="/upload"
+                                                        beforeUpload={this.handleBeforeUpload.bind(this)}
+                                                        onChange={this.handleReplacePic.bind(this)}
+                                                    >
+                                                        <span style={{color: '#03A9F4'}}>替换</span>
+                                                    </Upload>
+                                                    <CopyToClipboard
+                                                        className="btn-item"
+                                                        text={item.path}
+                                                        onCopy={(text, result) => this.handleCopyLink(text, result)}
+                                                    >
+                                                        <span>链接</span>
+                                                    </CopyToClipboard>
+                                                    <span className="btn-item" onClick={() => { this.showModal({ type: 'previewModal', previewImage: item.path, selectedPicLink: item.path }) }}>查看</span>
+                                                </div>
+                                                :
+                                                <div className="pic-name">{item.name}</div>
+                                            }
                                         </div>
                                     ))
                                     :
@@ -835,7 +859,8 @@ class App extends Component {
                                         :
                                         <div className="list-empty-box">
                                             <div className="list-empty-img"></div>
-                                            <div>该分类下数据为空~</div>
+                                            <div>暂无图片</div>
+                                            <div><Button style={{marginTop: 20}} type="primary" className="search-btn" onClick={e => this.showModal({ type: 'uploadModal' })}>上传图片</Button></div>
                                         </div>
                             }
                         </div>

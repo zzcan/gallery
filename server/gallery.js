@@ -140,8 +140,7 @@ Router.post('/moveCategory', (req, res) => {
 // 删除图片
 Router.post('/delPic', (req, res) => {
     const { ids } = req.body
-    console.log(ids)
-    Pic.remove({ id: {$in: ids} }).then(data => {
+    Pic.remove({ id: {$in: ids.split(',')} }).then(data => {
         if(data.ok === 1) {
             res.json({Code: 0, Data: true, Msg: 'success'})
         }else {
