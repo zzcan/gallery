@@ -90,7 +90,7 @@ class App extends Component {
                     }
                 })
             }else if(res.data.Code === 403) {
-                window.location.href = res.data.Msg;
+                // window.location.href = res.data.Msg;
             }
         })
     }
@@ -383,6 +383,7 @@ class App extends Component {
                         imgList: res.data.Data.data,
                         imgTotal: res.data.Data.total,
                         allChecked: false,
+                        selectListIds: []
                     });
                 })
             }
@@ -542,12 +543,12 @@ class App extends Component {
             let { imgList } = this.state;
             const id = file.response.Data;
             imgList = imgList.map(v => {
-                if (v.id === id) return { ...v, ...file.response.Data };
+                if (v.id === id) return { ...v, id };
                 return v;
             });
             this.setState({ imgList })
-        } else if (file.response && file.response.Code !== 0) {
-            message.success('图片替换失败！')
+        } else if(file.response && file.response.Code !== 0) {
+            message.error('图片替换失败！');
         }
     }
     // 列表排序
@@ -765,7 +766,7 @@ class App extends Component {
                             </div>
                         </Popover>
                         <div className="capacity">
-                            <Progress type="dashboard" percent={capacity.percent} width={48} />
+                            <Progress type="dashboard" percent={capacity.percent || 0} width={48} />
                             <span className="capacity-text">{capacity.usedSpace}/{capacity.totalSize}</span>
                             <span className="blue-6" style={{ cursor: 'pointer' }}>扩容</span>
                         </div>
@@ -899,10 +900,8 @@ class App extends Component {
                                                             style={{ lineHeight: 1 }}
                                                             className="btn-item"
                                                             showUploadList={false}
-                                                            accept="image/jpg,image/jpeg,image/png,image/bmp"
-                                                            name={`&${item.id}`}
-                                                            action="/image/uploadFiles"
-                                                            beforeUpload={this.handleBeforeUpload.bind(this)}
+                                                            action="/image/ReplaceImg"
+                                                            data={{ id: item.id }}
                                                             onChange={this.handleReplacePic.bind(this)}
                                                         >
                                                             <span style={{ color: '#03A9F4' }}>替换</span>
@@ -978,7 +977,7 @@ class App extends Component {
                                         data={{ categoryId: selectedCategory ? selectedCategory.id : null }}
                                         listType="picture-card"
                                         multiple
-                                        accept="image/jpg,image/jpeg,image/png,image/bmp"
+                                        accept="image/jpg,image/jpeg,image/gif,image/png"
                                         fileList={fileList}
                                         showUploadList={{ showPreviewIcon: false }}
                                         beforeUpload={this.handleBeforeUpload.bind(this)}
