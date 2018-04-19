@@ -186,14 +186,16 @@
 }
 .list-sort .time-sort {
     float: left;
+    cursor: pointer;
 }
 .list-sort .name-sort {
     float: right;
     margin-left: 10px;
+    cursor: pointer;
 }
 .list-sort .sort-icon {
     position: relative;
-    top: 6px;
+    top: 4px;
     margin-left: 6px;
     display: inline-block;
     width: 20px;
@@ -203,10 +205,11 @@
     position: absolute;
     left: 0;
     font-size: 12px;
+    transform: scale(.66666667) rotate(0deg);
     cursor: pointer;
 }
 .sort-icon i.anticon-caret-up {
-    top: 0;
+    top: 2px;
 }
 .sort-icon i.anticon-caret-down {
     bottom: 0;
