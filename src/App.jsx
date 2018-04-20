@@ -89,7 +89,7 @@ class App extends Component {
                         });
                     }
                 })
-            }else if(res.data.Code === 403) {
+            } else if (res.data.Code === 403) {
                 // window.location.href = res.data.Msg;
             }
         })
@@ -337,8 +337,8 @@ class App extends Component {
     }
     //移动图片至新分组的弹窗中 分组选择框选中回调
     handleCateChange(value) {
-        let movedCategoryId = value 
-        this.setState({ 
+        let movedCategoryId = value
+        this.setState({
             movedCategoryId: value,
         });
         this.handleMoveCate(movedCategoryId)
@@ -479,6 +479,7 @@ class App extends Component {
         if (!isLtMax) {
             message.error(`文件大小超过${MAXFILESIZE}M限制`);
         }
+        console.log('isLtMax', isLtMax)
         return isLtMax;
     }
     // 图片上传改变的状态
@@ -538,7 +539,9 @@ class App extends Component {
     }
     // 图片替换
     handleReplacePic({ file }) {
+        console.log('图片替换成功！1')
         if (file.response && file.response.Code === 0) {
+            console.log('图片替换成功！2')
             message.success('图片替换成功！')
             let { imgList } = this.state;
             const id = file.response.Data;
@@ -547,7 +550,7 @@ class App extends Component {
                 return v;
             });
             this.setState({ imgList })
-        } else if(file.response && file.response.Code !== 0) {
+        } else if (file.response && file.response.Code !== 0) {
             message.error('图片替换失败！');
         }
     }
@@ -635,7 +638,7 @@ class App extends Component {
    * @param {imgSrc 网络图片路径} options 
    */
     uploadWebImg(options) {
-        return axios.post('/image/uploadWebImg', options);
+        return axios.post('/image/uploadWebImg', qs.stringify(options));
     }
     render() {
         const {
@@ -674,7 +677,7 @@ class App extends Component {
                     <div className="logo-box">
                         <div className="logo"></div>
                         <Divider type="vertical" />
-                        <span className="font-16">图片管理</span>
+                        <span className="font-16">图片库</span>
                     </div>
                     <div className="user-info">
                         {
@@ -898,10 +901,12 @@ class App extends Component {
                                                         </Popover>
                                                         <Upload
                                                             style={{ lineHeight: 1 }}
-                                                            className="btn-item"
-                                                            showUploadList={false}
                                                             action="/image/ReplaceImg"
+                                                            showUploadList={false}
                                                             data={{ id: item.id }}
+                                                            listType="text"
+                                                            accept="image/jpg,image/jpeg,image/gif,image/png"
+                                                            beforeUpload={this.handleBeforeUpload.bind(this)}
                                                             onChange={this.handleReplacePic.bind(this)}
                                                         >
                                                             <span style={{ color: '#03A9F4' }}>替换</span>
