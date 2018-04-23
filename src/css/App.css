@@ -32,6 +32,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    z-index: 100;
 }
 
 .header {
@@ -62,7 +63,7 @@
 }
 
 .user-info .user-name {
-    margin: 0 8px 0 16px;
+    margin: 0 16px 0 8px;
 }
 
 .sider {
@@ -217,15 +218,16 @@
 /* 图片列表 */
 
 .pic-container {
+    width: 100%;
     position: relative;
-    display: flex;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    /* width: 1000px;
+    margin: 0 auto; */
     padding-top: 20px;
     min-height: 400px;
 }
 
 .pic-container .pic-item {
+    float: left;
     width: 180px;
     height: 222px;
     margin-bottom: 20px;
@@ -264,12 +266,16 @@
     height: 180px;
     text-align: center;
     vertical-align: middle;
+    overflow: hidden;
 }
 
 .pic-box img {
-    display: block;
+    position: absolute;
     width: 100%;
-    height: 100%;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
 }
 
 .pic-name {
@@ -305,17 +311,38 @@
 /* 弹窗 */
 
 /* 图片预览 */
-
+.preview-modal-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, .6);
+    z-index: 1024;
+}
 .preview-modal {
-    height: 520px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 520px;
+    max-height: 520px;
 }
-
-.preview-modal .ant-modal-content .ant-modal-body {
-    height: 100%;
+.preview-modal .preview-close {
+    position: absolute;
+    top: -8px;
+    right: -24px;
+    font-size: 20px;
+    color: #fff;
+    cursor: pointer;
 }
-.preview-modal img{
+.preview-modal .preview-download {
+    position: absolute;
+    bottom: -38px;
+    left: 0;
     width: 100%;
-    height: 94%;
+    background: rgba(0, 0, 0, 0);
+    text-align: center;
 }
 .preview-modal .row {
     position: relative;
@@ -345,17 +372,21 @@
 /* 空数据 */
 
 .list-empty-box {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 402px;
     background: #fff;
     text-align: center;
+    z-index: 98;
 }
 
 .list-empty-box .list-empty-img {
     width: 104px;
     height: 96px;
-    margin: 84px auto 20px;
-    background: url('../images/list-empty-img.png') no-repeat;
+    margin: 84px auto 0;
+    background: url('../images/list-empty-img.png') no-repeat center;
 }
 
 /* popover */

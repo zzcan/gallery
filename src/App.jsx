@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import ReactDOM from 'react-dom';
 import {
     Layout,
     Divider,
@@ -17,7 +18,6 @@ import {
     Spin,
     Popover,
     Tabs,
-    Popconfirm,
 } from 'antd';
 import axios from 'axios';
 import { CopyToClipboard } from 'react-copy-to-clipboard';   //复制到剪切板插件
@@ -38,7 +38,6 @@ class App extends Component {
             capacity: {},
 
             pageIndex: 1,
-            pageSize: 10,
             imgList: [],  //图片列表
             imgTotal: null,
             selectListIds: [],  //选中的图片id数组
@@ -62,7 +61,14 @@ class App extends Component {
             addCatePopoverVisible: false,
         }
     }
-    componentWillMount() {
+    componentDidMount() {
+        const wrapperWidth = this.refs.picWrapper.clientWidth;
+        const marginLeft = 20;
+        const picItemWidth = 180;
+        let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft)) - 1;
+        const menuDom = ReactDOM.findDOMNode(this.refs.layoutMenu);
+        
+        this.setState({ pageSize: 2 * i, initPageSize: 2 * i, menuDom });
         this.getUserInfo().then(res => {
             if (res.data.Code === 0) {
                 this.setState({ user: res.data.Data });
@@ -78,7 +84,7 @@ class App extends Component {
                             categories: res.data.Data,
                             selectedCategory: { categoryName, id }
                         });
-                        return this.getList({ categoryId: id, pageIndex: 1, pageSize: 10 });
+                        return this.getList({ categoryId: id, pageIndex: 1, pageSize: 2 * i });
                     }
                 }).then(res => {
                     if (res.data.Code === 0) {
@@ -94,6 +100,29 @@ class App extends Component {
             }
         })
     }
+    // calculateDomHeight() {
+    //     const { menuDom } = this.state;
+    //     const { addBtn } = this.refs;
+    //     const offsetHeight = menuDom.offsetHeight;
+    //     const menuClassName = menuDom.className.split(" ");
+    //     const addBtnlassName = addBtn.className.split(" ");
+    //     const flag = menuClassName.find(v => v === 'scroll');
+    //     if (offsetHeight >= 500) {
+    //         if(!flag) {
+    //             menuDom.className = `${menuDom.className} scroll`;
+    //             console.log('1',menuDom.className)
+    //             addBtn.className = `${addBtn.className} fixed`
+    //             console.log('1',addBtn.className)
+    //         }
+    //     }else {
+    //         if(flag) {
+    //             menuDom.className = menuClassName.filter(v => v === 'scroll').join(" ");
+    //             addBtn.className = addBtnlassName.filter(v => v === 'fixed').join(" ");
+    //             console.log('2', menuDom.className)
+    //             console.log('2', addBtn.className)
+    //         }
+    //     }
+    // }
     /**
      * 选中分组的回调
      * @param {选中的分组id} id 
@@ -150,7 +179,7 @@ class App extends Component {
                 this.handleCancel('addModal');
                 this.setState({
                     selectedCategory: res.data.Data,
-                    categories: [...this.state.categories, res.data.Data],
+                    categories: [...this.state.categories, { categoryName: iptCategoryName, id: res.data.Data.id, count: 0 }],
                     confirmLoading: false,
                     addCatePopoverVisible: false,
                     iptCategoryName: '',
@@ -276,20 +305,26 @@ class App extends Component {
         this.setState({ [type]: value });
     }
     // 图片列表popover
-    handleListPopover(visible, id) {
+    handleListPopover(visible, id, name) {
         const { imgList } = this.state;
         imgList.forEach(v => {
             v.popoverVisible = v.id === id;
         })
-        this.setState({ imgList });
+        this.setState({
+            imgList,
+            iptPicName: name
+        });
     }
     // 分组popover    
-    handleMenuPopover(type, visible, id) {
+    handleMenuPopover(type, visible, id, name = '') {
         const { categories } = this.state;
         categories.forEach(v => {
             v[type] = v.id === id;
         })
-        this.setState({ categories });
+        this.setState({
+            categories,
+            iptCateName: name
+        });
     }
     // 点击列表中的图片
     handleListClick(id) {
@@ -318,6 +353,7 @@ class App extends Component {
         const { imgList } = this.state;
         imgList.forEach(item => {
             item.isMouseEnter = false;
+            item.popoverVisible = false;
         })
         this.setState({ imgList })
     }
@@ -369,7 +405,7 @@ class App extends Component {
     }
     /**
      * 删除图片
-     * @param {存在传进来的ids则表示单个图片的删除} ids 
+     * @param {String} ids
      */
     handleDeletePic() {
         const { selectListIds, selectedCategory, pageIndex, pageSize } = this.state;
@@ -572,6 +608,12 @@ class App extends Component {
             nameSortUp: (isNameSort === 0 || isNameSort || isTimeSort) && !nameSortUp ? true : false,
         })
     }
+    handleCancelPreviewModal(e) {
+        let maskDom = e.target;
+        if (maskDom.className) {
+            this.setState({ previewModalVisible: false })
+        }
+    }
     // 获取用户信息
     getUserInfo() {
         return axios.get('/image/getUserInfo');
@@ -669,7 +711,9 @@ class App extends Component {
             timeSortUp,
             nameSortUp,
             addCatePopoverVisible,
+            initPageSize
         } = this.state;
+        const pageSizeOptions = [`${initPageSize * 1}`, `${initPageSize * 2}`, `${initPageSize * 3}`, `${initPageSize * 4}`]
         return (
             <Layout className="basic-layout">
                 <Spin className="basic-spin" spinning={loading} size="large" />
@@ -694,6 +738,7 @@ class App extends Component {
                     <Sider className="sider">
                         <Menu
                             className="menu"
+                            ref="layoutMenu"
                             defaultSelectedKeys={['0']}
                             selectedKeys={selectedCategory ? [`${selectedCategory.id}`] : ['0']}
                             mode="inline"
@@ -702,6 +747,7 @@ class App extends Component {
                             {
                                 categories.map(v => (
                                     <Menu.Item
+                                        ref="menuItem"
                                         className="menu-item" key={v.id + ''}
                                         onMouseEnter={() => this.handleMenuItemHover(v.id)}
                                         onMouseLeave={() => this.handleMenuItemMleave()}
@@ -716,29 +762,35 @@ class App extends Component {
                                                             <div>
                                                                 <Input placeholder="请输入名称" value={iptCateName} onChange={e => this.handleInput('iptCateName', e.target.value)} />
                                                                 <div className="popover-btns">
-                                                                    <Button size="small" onClick={() => { this.handleMenuCancelPopover('popoverVisible', v.id) }}>取消</Button>
+                                                                    <Button size="small" onClick={() => { this.handleMenuCancelPopover('cateRenamePopoverVisible', v.id) }}>取消</Button>
                                                                     <Button size="small" loading={confirmLoading} onClick={() => { this.handleCateRename(v.id) }} type="primary" style={{ marginLeft: 10 }}>确定</Button>
                                                                 </div>
                                                             </div>
                                                         }
                                                         title="修改名称"
                                                         trigger="click"
-                                                        visible={v.popoverVisible}
-                                                        onVisibleChange={visible => this.handleMenuPopover('popoverVisible', visible, v.id)}
+                                                        visible={v.cateRenamePopoverVisible}
+                                                        onVisibleChange={visible => this.handleMenuPopover('cateRenamePopoverVisible', visible, v.id, v.categoryName)}
                                                     >
                                                         <Icon type="edit" />
                                                     </Popover>
-                                                    <Popconfirm
-                                                        title="确定删除这个分组吗?"
+                                                    <Popover
+                                                        title="确定删除?"
+                                                        content={
+                                                            <div>
+                                                                <div>若删除，分组内的{v.count}张图片全部转移到默认分组。</div>
+                                                                <div className="popover-btns">
+                                                                    <Button size="small" onClick={() => { this.handleMenuCancelPopover('delPopoverVisible', v.id) }}>取消</Button>
+                                                                    <Button size="small" loading={confirmLoading} onClick={() => { this.handleDeleteCategory(v.id) }} type="primary" style={{ marginLeft: 10 }}>确定</Button>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                        trigger="click"
                                                         visible={v.delPopoverVisible}
                                                         onVisibleChange={visible => this.handleMenuPopover('delPopoverVisible', visible, v.id)}
-                                                        onConfirm={() => { this.handleDeleteCategory(v.id) }}
-                                                        onCancel={() => { this.handleMenuCancelPopover('delPopoverVisible', v.id) }}
-                                                        okText="确定"
-                                                        cancelText="取消"
                                                     >
-                                                        <Icon type="delete" />
-                                                    </Popconfirm>
+                                                        <Icon type="delete" style={{ marginRight: 0 }} />
+                                                    </Popover>
                                                 </div>
                                                 :
                                                 <span style={{ float: 'right' }}>{v.count}</span>
@@ -763,7 +815,7 @@ class App extends Component {
                             visible={addCatePopoverVisible}
                             onVisibleChange={visible => this.setState({ addCatePopoverVisible: visible })}
                         >
-                            <div className="add-btn">
+                            <div className="add-btn" ref="addBtn">
                                 <Icon type="plus" />
                                 <span className="btn-text">添加分组</span>
                             </div>
@@ -779,14 +831,19 @@ class App extends Component {
                             <div className="header-left">
                                 <span className="font-18 color-26">{selectedCategory ? selectedCategory.categoryName : ''}</span>
                             </div>
-                            <div className="header-right">
-                                <Button type="primary" className="search-btn" onClick={e => this.showModal({ type: 'uploadModal' })}>上传图片</Button>
-                                <Input.Search
-                                    placeholder="请输入图片名称"
-                                    onSearch={value => this.handleSearchPic(value)}
-                                    style={{ width: 346 }}
-                                />
-                            </div>
+                            {
+                                imgList.length ?
+                                    <div className="header-right">
+                                        <Button type="primary" className="search-btn" onClick={e => this.showModal({ type: 'uploadModal' })}>上传图片</Button>
+                                        <Input.Search
+                                            placeholder="请输入图片名称"
+                                            onSearch={value => this.handleSearchPic(value)}
+                                            style={{ width: 346 }}
+                                        />
+                                    </div>
+                                    :
+                                    null
+                            }
                         </div>
                         {
                             imgList.length ?
@@ -820,17 +877,23 @@ class App extends Component {
                                                     <span>修改分组</span>
                                                 </Popover>
                                                 <Divider type="vertical" />
-                                                <Popconfirm
+                                                <Popover
                                                     title="确定删除选中的图片吗?"
+                                                    content={
+                                                        <div>
+                                                            <div>已选中的{selectListIds.length}张图片删除后，使用这些图片的相关业务会受影响。</div>
+                                                            <div className="popover-btns">
+                                                                <Button size="small" onClick={() => { this.setState({ picDelPopoverVisible: false }) }}>取消</Button>
+                                                                <Button size="small" loading={confirmLoading} onClick={this.handleDeletePic.bind(this)} type="primary" style={{ marginLeft: 10 }}>确定</Button>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    trigger="click"
                                                     visible={this.state.picDelPopoverVisible}
                                                     onVisibleChange={visible => this.setState({ picDelPopoverVisible: visible })}
-                                                    onConfirm={this.handleDeletePic.bind(this)}
-                                                    onCancel={() => { this.setState({ picDelPopoverVisible: false }) }}
-                                                    okText="确定"
-                                                    cancelText="取消"
                                                 >
                                                     <span>删除</span>
-                                                </Popconfirm>
+                                                </Popover>
                                             </div>
                                             :
                                             null
@@ -855,8 +918,7 @@ class App extends Component {
                                 :
                                 null
                         }
-
-                        <div className="pic-container">
+                        <div className="pic-container clearfix" ref="picWrapper">
                             {<Spin className="list-spin" spinning={listLoading} size="large" />}
                             {
                                 imgList.length ?
@@ -864,6 +926,7 @@ class App extends Component {
                                         <div
                                             className={selectListIds.includes(item.id) ? 'pic-item active' : 'pic-item'}
                                             key={item.id}
+                                            ref="picItem"
                                             onMouseEnter={e => this.handleListEnter(e, item.id)}
                                             onMouseLeave={e => this.handleListLeave(e)}
                                         >
@@ -895,12 +958,13 @@ class App extends Component {
                                                             title="修改名称"
                                                             trigger="click"
                                                             visible={item.popoverVisible}
-                                                            onVisibleChange={visible => this.handleListPopover(visible, item.id)}
+                                                            onVisibleChange={visible => this.handleListPopover(visible, item.id, item.name)}
                                                         >
                                                             <span className="btn-item">改名</span>
                                                         </Popover>
                                                         <Upload
                                                             style={{ lineHeight: 1 }}
+                                                            className="btn-item"
                                                             action="/image/ReplaceImg"
                                                             showUploadList={false}
                                                             data={{ id: item.id }}
@@ -947,6 +1011,7 @@ class App extends Component {
                                     defaultCurrent={1}
                                     pageSize={pageSize}
                                     current={pageIndex}
+                                    pageSizeOptions={pageSizeOptions}
                                     total={imgTotal}
                                     onChange={(page, pageSize) => this.handlePageChange('pageIndexChange', page)}
                                     onShowSizeChange={(current, size) => this.handlePageChange('pageSizeChange', size)}
@@ -958,17 +1023,21 @@ class App extends Component {
                     </Content>
                 </Layout>
                 {/* 图片预览 复制链接 下载 */}
-                <Modal
-                    className="preview-modal"
-                    visible={previewModalVisible}
-                    footer={null}
-                    onCancel={() => this.handleCancel('previewModal')}
-                >
-                    <img alt="" src={previewImage} />
-                    <div style={{ textAlign: 'center' }}>
-                        <Button href={selectedPicLink} download={selectedPicLink}>下载</Button>
-                    </div>
-                </Modal>
+                {
+                    previewModalVisible ?
+                        <div className="preview-modal-mask" onClick={this.handleCancelPreviewModal.bind(this)}>
+                            <div className="preview-modal">
+                                <Icon type="close" className="preview-close" />
+                                <img alt="" src={previewImage} />
+                                <div className="preview-download">
+                                    <Button href={selectedPicLink} download={selectedPicLink}>下载</Button>
+                                </div>
+                            </div>
+                        </div>
+                        :
+                        null
+                }
+
                 {/* 图片上传弹窗 */}
                 <Modal
                     title={

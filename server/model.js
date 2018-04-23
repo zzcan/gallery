@@ -4,7 +4,7 @@ mongoose.connect(DB_URL)
 mongoose.Promise = global.Promise
 const models = {
     capacity: {
-        percent: String,
+        percent: Number,
         totalSize: String,
         usedSpace: String
     },
