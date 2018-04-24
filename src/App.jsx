@@ -39,6 +39,7 @@ class App extends Component {
 
             pageIndex: 1,
             imgList: [],  //图片列表
+            sortParameter: 'CreateTime_desc',
             imgTotal: null,
             selectListIds: [],  //选中的图片id数组
             allChecked: false,  //全选按钮
@@ -53,7 +54,7 @@ class App extends Component {
             previewImage: '', //要预览的图片
             isLimit: false,
 
-            isTimeSort: 0,  //时间排序
+            isTimeSort: true,  //时间排序
             isNameSort: 0,  //名称排序
             timeSortUp: false, //正序or倒序
             nameSortUp: false, //正序or倒序
@@ -67,7 +68,7 @@ class App extends Component {
         const picItemWidth = 180;
         let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft)) - 1;
         const menuDom = ReactDOM.findDOMNode(this.refs.layoutMenu);
-        
+
         this.setState({ pageSize: 2 * i, initPageSize: 2 * i, menuDom });
         this.getUserInfo().then(res => {
             if (res.data.Code === 0) {
@@ -84,7 +85,7 @@ class App extends Component {
                             categories: res.data.Data,
                             selectedCategory: { categoryName, id }
                         });
-                        return this.getList({ categoryId: id, pageIndex: 1, pageSize: 2 * i });
+                        return this.getList({ categoryId: id, pageIndex: 1, pageSize: 2 * i, sortParameter: this.state.sortParameter });
                     }
                 }).then(res => {
                     if (res.data.Code === 0) {
@@ -100,49 +101,26 @@ class App extends Component {
             }
         })
     }
-    // calculateDomHeight() {
-    //     const { menuDom } = this.state;
-    //     const { addBtn } = this.refs;
-    //     const offsetHeight = menuDom.offsetHeight;
-    //     const menuClassName = menuDom.className.split(" ");
-    //     const addBtnlassName = addBtn.className.split(" ");
-    //     const flag = menuClassName.find(v => v === 'scroll');
-    //     if (offsetHeight >= 500) {
-    //         if(!flag) {
-    //             menuDom.className = `${menuDom.className} scroll`;
-    //             console.log('1',menuDom.className)
-    //             addBtn.className = `${addBtn.className} fixed`
-    //             console.log('1',addBtn.className)
-    //         }
-    //     }else {
-    //         if(flag) {
-    //             menuDom.className = menuClassName.filter(v => v === 'scroll').join(" ");
-    //             addBtn.className = addBtnlassName.filter(v => v === 'fixed').join(" ");
-    //             console.log('2', menuDom.className)
-    //             console.log('2', addBtn.className)
-    //         }
-    //     }
-    // }
     /**
      * 选中分组的回调
      * @param {选中的分组id} id 
      */
     handleMenuChange(id) {
-        const { categories, selectedCategory } = this.state;
+        const { categories, selectedCategory, initPageSize, sortParameter } = this.state;
         if (selectedCategory.id === id) return;
         this.setState({
             selectedCategory: categories.filter(item => item.id === id)[0],
             listLoading: true,
             selectListIds: [],
         });
-        this.getList({ categoryId: id, pageIndex: 1, pageSize: 10 }).then(res => {
+        this.getList({ categoryId: id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             this.setState({ listLoading: false });
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
                     imgTotal: res.data.Data.total,
                     pageIndex: 1,
-                    pageSize: 10,
+                    pageSize: initPageSize,
                 });
             }
         })
@@ -255,7 +233,7 @@ class App extends Component {
     }
     // 删除分组
     handleDeleteCategory(id) {
-        const { categories } = this.state;
+        const { categories, initPageSize, sortParameter } = this.state;
         if (id === 0) {
             message.error('未分组不能删除!');
             return;
@@ -270,7 +248,7 @@ class App extends Component {
                     confirmLoading: false,
                 });
                 message.success('删除分组成功！')
-                return this.getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: 10 });
+                return this.getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: initPageSize, sortParameter });
             }
         }).then(res => {
             if (res.data.Code === 0) {
@@ -284,14 +262,15 @@ class App extends Component {
     }
     // 搜索图片  当前分组下搜索图片
     handleSearchPic(value) {
-        const { selectedCategory } = this.state;
+        const { selectedCategory, initPageSize, sortParameter } = this.state;
         this.setState({ listLoading: true });
-        this.getList({ categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: 10 }).then(res => {
+        this.getList({ categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
                     imgTotal: res.data.Data.total,
                     listLoading: false,
+                    pageSize: initPageSize
                 });
             }
         })
@@ -341,10 +320,26 @@ class App extends Component {
         }
     }
     // 鼠标移上图片效果
-    handleListEnter(e, id) {
-        const { imgList } = this.state;
+    handleListEnter(e, pic) {
+        let { imgList } = this.state;
+        if (pic.ossPath === undefined) {
+            this.getPicInfo(pic.path, { 'x-oss-process': 'image/info' }).then(res => {
+                if (res.data && res.data.ImageWidth) {
+                    let ossSize = ["60", "80", "85", "100", "300", "450", "160", "150", "200", "320", "640"];
+                    let ossPath = ossSize.includes(res.data.ImageWidth.value) ?
+                        `${pic.path}?x-oss-process=style/${res.data.ImageWidth.value}`
+                        :
+                        '';
+                    imgList.forEach(v => {
+                        if (v.id === pic.id) v.ossPath = ossPath;
+                    })
+                    this.setState({ imgList });
+                }
+            });
+        }
         imgList.forEach(item => {
-            if (item.id === id) item.isMouseEnter = true;
+            if (item.id === pic.id) item.isMouseEnter = true;
+            item.ossPath = '';
         })
         this.setState({ imgList })
     }
@@ -381,7 +376,7 @@ class App extends Component {
     }
     //移动图片至新分组弹窗确定按钮回调
     handleMoveCate(movedCategoryId) {
-        const { selectedCategory, selectListIds } = this.state;
+        const { selectedCategory, selectListIds, initPageSize, sortParameter } = this.state;
         if (movedCategoryId === selectedCategory.id) {
             this.handleCancel('moveCateModal');
             message.error('已在该分组内!');
@@ -391,13 +386,14 @@ class App extends Component {
         this.moveCategory({ categoryId: movedCategoryId, ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
                 message.success('修改分组成功!')
-                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: 10 }).then(res => {
+                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
                     this.setState({
                         imgList: res.data.Data.data,
                         imgTotal: res.data.Data.total,
                         confirmLoading: false,
                         selectListIds: [],
                         allChecked: false,
+                        pageSize: initPageSize
                     });
                 })
             }
@@ -408,13 +404,13 @@ class App extends Component {
      * @param {String} ids
      */
     handleDeletePic() {
-        const { selectListIds, selectedCategory, pageIndex, pageSize } = this.state;
+        const { selectListIds, selectedCategory, pageIndex, pageSize, sortParameter } = this.state;
         // 批量删除且并未有任何图片选中
         if (!selectListIds.length) return message.error('请选择需要删除的图片');
         this.delPic({ ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
                 message.success('删除图片成功!');
-                this.getList({ categoryId: selectedCategory.id, pageIndex, pageSize }).then(res => {
+                this.getList({ categoryId: selectedCategory.id, pageIndex, pageSize, sortParameter }).then(res => {
                     this.setState({
                         imgList: res.data.Data.data,
                         imgTotal: res.data.Data.total,
@@ -460,7 +456,7 @@ class App extends Component {
      * @param {改变后的状态} size 
      */
     handlePageChange(type, page) {
-        const { selectedCategory, pageSize } = this.state;
+        const { selectedCategory, pageSize, sortParameter } = this.state;
         const options = {
             pageIndexChange: {
                 pageIndex: page,
@@ -472,7 +468,7 @@ class App extends Component {
             }
         }
         this.setState({ listLoading: true });
-        this.getList({ categoryId: selectedCategory.id, ...options[type] }).then(res => {
+        this.getList({ categoryId: selectedCategory.id, ...options[type], sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
@@ -486,20 +482,21 @@ class App extends Component {
     }
     // 上传网络图片
     handleUploadWebImg() {
-        const { webImg, pageSize, selectedCategory } = this.state;
+        const { webImg, selectedCategory, initPageSize, sortParameter } = this.state;
         if (!webImg) {
             message.error('请输入需要提取的网络图片!');
             return;
         }
         this.uploadWebImg({ imgSrc: webImg, categoryId: selectedCategory.id }).then(res => {
             if (res.data.Code === 0) {
-                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize }).then(res => {
+                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
                     if (res.data.Code === 0) {
                         message.success('上传成功!');
                         this.setState({
                             imgList: res.data.Data.data,
                             imgTotal: res.data.Data.total,
                             pageIndex: 1,
+                            pageSize: initPageSize,
                             uploadModalVisible: false,
                         });
                     }
@@ -520,6 +517,7 @@ class App extends Component {
     }
     // 图片上传改变的状态
     handleUploadChange({ fileList }) {
+        console.log(fileList)
         // let fileList = e.fileList.map(file => {
         //     if (file.response) {
         //         //上传结束之后会调用的方法
@@ -544,7 +542,7 @@ class App extends Component {
     }
     // 上传图片弹窗取消按钮操作
     handleUploadModalClose(type) {
-        const { fileList, selectedCategory } = this.state;
+        const { fileList, selectedCategory, initPageSize, sortParameter } = this.state;
         if (type === 'cancel') {
             let ids = [];
             fileList.forEach(file => {
@@ -564,25 +562,24 @@ class App extends Component {
             allChecked: false,
             selectListIds: [],
         });
-        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: 10 }).then(res => {
+        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
                     imgTotal: res.data.Data.total,
+                    pageSize: initPageSize,
                 });
             }
         })
     }
     // 图片替换
     handleReplacePic({ file }) {
-        console.log('图片替换成功！1')
         if (file.response && file.response.Code === 0) {
-            console.log('图片替换成功！2')
             message.success('图片替换成功！')
             let { imgList } = this.state;
-            const id = file.response.Data;
+            const { id } = file.response.Data;
             imgList = imgList.map(v => {
-                if (v.id === id) return { ...v, id };
+                if (v.id === id) return { ...v, ...file.response.Data };
                 return v;
             });
             this.setState({ imgList })
@@ -590,22 +587,60 @@ class App extends Component {
             message.error('图片替换失败！');
         }
     }
+    handleReplaceImg(id) {
+        this.setState({ replaceImgId: id }, () => {
+            this.replaceImgDom.click()
+        })
+    }
     // 列表排序
     handleTimeSort() {
-        const { timeSortUp, isNameSort, isTimeSort } = this.state;
+        const { timeSortUp, isNameSort, isTimeSort, selectedCategory, initPageSize } = this.state;
+        // CreateTime 创建时间
+        // DisplayName 图片名称
+        // UpdateTime  修改时间
+        // FileSize 图片大小
+        let sortParameter = (isTimeSort || isNameSort) && !timeSortUp ? 'CreateTime_asc' : 'CreateTime_desc';
         this.setState({
             isTimeSort: true,
             isNameSort: false,
-            timeSortUp: (isTimeSort === 0 || isTimeSort || isNameSort) && !timeSortUp ? true : false,
+            timeSortUp: (isTimeSort || isNameSort) && !timeSortUp ? true : false,
+            sortParameter,
+            listLoading: true,
+        })
+        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+            if (res.data.Code === 0) {
+                this.setState({
+                    imgList: res.data.Data.data,
+                    imgTotal: res.data.Data.total,
+                    pageIndex: 1,
+                    pageSize: initPageSize,
+                    listLoading: false,
+                });
+            }
         })
     }
     // 名称排序
     handleNameSort() {
-        const { nameSortUp, isTimeSort, isNameSort } = this.state;
+        const { nameSortUp, isTimeSort, isNameSort, selectedCategory, initPageSize } = this.state;
+        let sortParameter = (isNameSort === 0 || isNameSort || isTimeSort) && !nameSortUp ? 'DisplayName_asc' : 'DisplayName_desc';
         this.setState({
             isNameSort: true,
             isTimeSort: false,
             nameSortUp: (isNameSort === 0 || isNameSort || isTimeSort) && !nameSortUp ? true : false,
+            sortParameter,
+            listLoading: true,
+        })
+        // categoryId, searchName 可选, pageIndex, pageSize, sortParameter
+        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+            if (res.data.Code === 0) {
+                this.setState({
+                    imgList: res.data.Data.data,
+                    imgTotal: res.data.Data.total,
+                    pageIndex: 1,
+                    pageSize: initPageSize,
+                    listLoading: false,
+                });
+            }
         })
     }
     handleCancelPreviewModal(e) {
@@ -628,10 +663,22 @@ class App extends Component {
     }
     /**
      * 获取图片列表
-     * @param {categoryId, searchName 可选, pageIndex, pageSize} options 
+     * sortParameter  desc降序 asc升序  默认CreateTime_desc
+     * CreateTime 创建时间
+     * DisplayName 图片名称
+     * UpdateTime  修改时间
+     * FileSize 图片大小
+     * @param {categoryId, searchName 可选, pageIndex, pageSize, sortParameter} options 
      */
     getList(options) {
         return axios.get('/image/getList', { params: options });
+    }
+    /**
+     * 获取oss图片信息
+     * @param {categoryId, searchName 可选, pageIndex, pageSize} options 
+     */
+    getPicInfo(url, options) {
+        return axios.get(url, { params: options });
     }
     /**
      * 添加分组
@@ -840,6 +887,19 @@ class App extends Component {
                                             onSearch={value => this.handleSearchPic(value)}
                                             style={{ width: 346 }}
                                         />
+                                        <Upload
+                                            style={{ lineHeight: 1 }}
+                                            className="btn-item"
+                                            action="/image/ReplaceImg"
+                                            showUploadList={false}
+                                            data={{ id: this.state.replaceImgId }}
+                                            listType="text"
+                                            accept="image/jpg,image/jpeg,image/gif,image/png"
+                                            beforeUpload={this.handleBeforeUpload.bind(this)}
+                                            onChange={this.handleReplacePic.bind(this)}
+                                        >
+                                            <span ref={span => this.replaceImgDom = span} style={{ color: '#03A9F4' }}>替换</span>
+                                        </Upload>
                                     </div>
                                     :
                                     null
@@ -927,7 +987,7 @@ class App extends Component {
                                             className={selectListIds.includes(item.id) ? 'pic-item active' : 'pic-item'}
                                             key={item.id}
                                             ref="picItem"
-                                            onMouseEnter={e => this.handleListEnter(e, item.id)}
+                                            onMouseEnter={e => this.handleListEnter(e, item)}
                                             onMouseLeave={e => this.handleListLeave(e)}
                                         >
                                             {
@@ -939,7 +999,7 @@ class App extends Component {
                                                     null
                                             }
                                             <div className="pic-box" onClick={e => this.handleListClick(item.id)}>
-                                                <img src={item.path} alt="" />
+                                                <img src={`${item.path}?x-oss-process=style/150`} alt="" />
                                             </div>
                                             {
                                                 item.isMouseEnter ?
@@ -962,22 +1022,12 @@ class App extends Component {
                                                         >
                                                             <span className="btn-item">改名</span>
                                                         </Popover>
-                                                        <Upload
-                                                            style={{ lineHeight: 1 }}
-                                                            className="btn-item"
-                                                            action="/image/ReplaceImg"
-                                                            showUploadList={false}
-                                                            data={{ id: item.id }}
-                                                            listType="text"
-                                                            accept="image/jpg,image/jpeg,image/gif,image/png"
-                                                            beforeUpload={this.handleBeforeUpload.bind(this)}
-                                                            onChange={this.handleReplacePic.bind(this)}
-                                                        >
-                                                            <span style={{ color: '#03A9F4' }}>替换</span>
-                                                        </Upload>
+                                                        <div className="btn-item">
+                                                            <span onClick={() => this.handleReplaceImg(item.id)} style={{ color: '#03A9F4' }}>替换</span>
+                                                        </div>
                                                         <CopyToClipboard
                                                             className="btn-item"
-                                                            text={item.path}
+                                                            text={item.ossPath ? item.ossPath : item.path}
                                                             onCopy={(text, result) => this.handleCopyLink(text, result)}
                                                         >
                                                             <span>链接</span>
@@ -1028,7 +1078,7 @@ class App extends Component {
                         <div className="preview-modal-mask" onClick={this.handleCancelPreviewModal.bind(this)}>
                             <div className="preview-modal">
                                 <Icon type="close" className="preview-close" />
-                                <img alt="" src={previewImage} />
+                                <img className="preview-img" alt="" src={previewImage} />
                                 <div className="preview-download">
                                     <Button href={selectedPicLink} download={selectedPicLink}>下载</Button>
                                 </div>
