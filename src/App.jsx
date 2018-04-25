@@ -18,11 +18,11 @@ import {
     Spin,
     Popover,
     Tabs,
+    notification
 } from 'antd';
 import axios from 'axios';
 import { CopyToClipboard } from 'react-copy-to-clipboard';   //复制到剪切板插件
 import './css/App.css';
-import './config';
 const qs = require('qs');
 const { Header, Sider, Content } = Layout;
 
@@ -30,6 +30,8 @@ class App extends Component {
     constructor(props) {
         super(props)
         this.state = {
+            logoAdrees: '',
+
             loading: true,  //全局loading
             listLoading: false, //列表加载loading
 
@@ -63,6 +65,14 @@ class App extends Component {
         }
     }
     componentDidMount() {
+        // 检测是否状态发生变化
+        if (window.localStorage.getItem("userChange")) {
+            window.localStorage.removeItem('userChange');
+            notification.warning({
+                message: '账号变更提醒',
+                description: '系统检测到当前登录账号发生变更，请确认无误后进行数据操作。'
+            });
+        }
         const wrapperWidth = this.refs.picWrapper.clientWidth;
         const marginLeft = 20;
         const picItemWidth = 180;
@@ -97,9 +107,15 @@ class App extends Component {
                     }
                 })
             } else if (res.data.Code === 403) {
-                // window.location.href = res.data.Msg;
+                window.location.href = res.data.Msg;
             }
         })
+    }
+    componentWillReceiveProps(nextProps) {
+        var link = document.createElement("link");
+        link.href = nextProps.IcoUrl;
+        link.rel = "shortcut icon";
+        document.head.appendChild(link);
     }
     /**
      * 选中分组的回调
@@ -140,6 +156,7 @@ class App extends Component {
             v.menuMouseEnter = false;
             v.popoverVisible = false;
             v.delPopoverVisible = false;
+            v.cateRenamePopoverVisible = false;
         })
         this.setState({ categories })
     }
@@ -164,6 +181,13 @@ class App extends Component {
                     imgList: [],
                     imgTotal: 0
                 })
+            }else {
+                message.error(res.data.Msg);
+                this.setState({
+                    confirmLoading: false,
+                    addCatePopoverVisible: false,
+                    iptCategoryName: '',
+                })
             }
         })
     }
@@ -174,6 +198,10 @@ class App extends Component {
             message.error(!iptCateName ? '修改的名称不能为空!' : '未分组不能更改名称!');
             return;
         }
+        if (iptCateName.length > 6) {
+            message.error('名称不能超过6个字!');
+            return;
+        }
         this.setState({ confirmLoading: true });
         this.categoryRename({ id, name: iptCateName }).then(res => {
             if (res.data.Code === 0) {
@@ -182,6 +210,7 @@ class App extends Component {
                     if (v.id === categoryId) {
                         v.categoryName = categoryName;
                         v.popoverVisible = false;
+                        v.cateRenamePopoverVisible = false;
                     }
                 })
                 this.setState({
@@ -325,21 +354,45 @@ class App extends Component {
         if (pic.ossPath === undefined) {
             this.getPicInfo(pic.path, { 'x-oss-process': 'image/info' }).then(res => {
                 if (res.data && res.data.ImageWidth) {
-                    let ossSize = ["60", "80", "85", "100", "300", "450", "160", "150", "200", "320", "640"];
-                    let ossPath = ossSize.includes(res.data.ImageWidth.value) ?
-                        `${pic.path}?x-oss-process=style/${res.data.ImageWidth.value}`
-                        :
-                        '';
+                    let ossSize = ["60", "80", "85", "100", "150", "160", "200", "300", "320", "450", "640"];
+                    let ossPath = '';
+                    let value = res.data.ImageWidth.value;
+                    if (ossSize.includes(value)) {
+                        ossPath = `${pic.path}?x-oss-process=style/${res.data.ImageWidth.value}`
+                    } else {
+                        value = +value;
+                        let MAXS = ossSize.filter(v => v > value);
+                        let MINS = ossSize.filter(v => v < value);
+                        let newValue = '';
+                        if (MAXS.length && MINS.length) {
+                            let MAX = MAXS[0];
+                            let MIN = MINS[MINS.length - 1];
+                            if (MAX - value > value - MIN || MAX - value === value - MIN) {
+                                newValue = MAX;
+                            } else {
+                                newValue = MIN;
+                            }
+                        } else if (!MAXS.length && MINS.length) {
+                            newValue = MINS[MINS.length - 1];
+                        } else if (MAXS.length && !MINS.length) {
+                            newValue = MAXS[0];
+                        }
+                        ossPath = `${pic.path}?x-oss-process=style/${newValue}`
+                    }
                     imgList.forEach(v => {
                         if (v.id === pic.id) v.ossPath = ossPath;
                     })
                     this.setState({ imgList });
                 }
+            }).catch(err => {
+                imgList.forEach(v => {
+                    if (v.id === pic.id) v.ossPath = pic.path;
+                })
+                this.setState({ imgList });
             });
         }
         imgList.forEach(item => {
             if (item.id === pic.id) item.isMouseEnter = true;
-            item.ossPath = '';
         })
         this.setState({ imgList })
     }
@@ -415,10 +468,13 @@ class App extends Component {
                         imgList: res.data.Data.data,
                         imgTotal: res.data.Data.total,
                         allChecked: false,
-                        selectListIds: []
+                        selectListIds: [],
                     });
                 })
             }
+            this.setState({ picDelPopoverVisible: false })
+        }).catch(err => {
+            this.setState({ picDelPopoverVisible: false })
         })
     }
     /**
@@ -517,16 +573,6 @@ class App extends Component {
     }
     // 图片上传改变的状态
     handleUploadChange({ fileList }) {
-        console.log(fileList)
-        // let fileList = e.fileList.map(file => {
-        //     if (file.response) {
-        //         //上传结束之后会调用的方法
-        //         if (file.response.Code === 0) {
-        //             return {...file, id: file.response.Data.id}
-        //         }
-        //     }
-        //     return file;
-        // });
         this.setState({ fileList });
     }
     // 已上传的图片移除
@@ -576,13 +622,16 @@ class App extends Component {
     handleReplacePic({ file }) {
         if (file.response && file.response.Code === 0) {
             message.success('图片替换成功！')
-            let { imgList } = this.state;
+            const { imgList } = this.state;
             const { id } = file.response.Data;
-            imgList = imgList.map(v => {
-                if (v.id === id) return { ...v, ...file.response.Data };
+            file.response.Data.path = `${file.response.Data.path}?x-oss-process=style/150&${Math.random() * 10000}`
+            const newImgList = imgList.map(v => {
+                if (v.id === id) {
+                    return file.response.Data;
+                }
                 return v;
             });
-            this.setState({ imgList })
+            this.setState({ imgList: newImgList })
         } else if (file.response && file.response.Code !== 0) {
             message.error('图片替换失败！');
         }
@@ -651,15 +700,21 @@ class App extends Component {
     }
     // 获取用户信息
     getUserInfo() {
-        return axios.get('/image/getUserInfo');
+        return axios.get('/image/getUserInfo', {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     // 获取分组
     getCategory(options) {
-        return axios.get('/image/getCategory');
+        return axios.get('/image/getCategory', {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     // 获取容量信息
     getSpace(options) {
-        return axios.get('/image/getSpace');
+        return axios.get('/image/getSpace', {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 获取图片列表
@@ -671,63 +726,81 @@ class App extends Component {
      * @param {categoryId, searchName 可选, pageIndex, pageSize, sortParameter} options 
      */
     getList(options) {
-        return axios.get('/image/getList', { params: options });
+        return axios.get('/image/getList', { params: options }, {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 获取oss图片信息
      * @param {categoryId, searchName 可选, pageIndex, pageSize} options 
      */
     getPicInfo(url, options) {
-        return axios.get(url, { params: options });
+        return axios.get(url, { params: options }, {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 添加分组
      * @param {categoryName} options 
      */
     addCategory(options) {
-        return axios.post('/image/addCategory', qs.stringify(options));
+        return axios.post('/image/addCategory', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 修改分组名
      * @param {id, name} options 
      */
     categoryRename(options) {
-        return axios.post('/image/categoryRename', qs.stringify(options));
+        return axios.post('/image/categoryRename', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
     * 修改分组名
     * @param {ids,name} options 
     */
     picRename(options) {
-        return axios.post('/image/picRename', qs.stringify(options));
+        return axios.post('/image/picRename', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 删除分组
      * @param {categoryId} options 
      */
     delCategory(options) {
-        return axios.post('/image/delCategory', qs.stringify(options));
+        return axios.post('/image/delCategory', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 移动图片至新分组
      * @param {categoryId 新分组id, id 图片id} options 
      */
     moveCategory(options) {
-        return axios.post('/image/moveCategory', qs.stringify(options));
+        return axios.post('/image/moveCategory', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
      * 删除图片
      * @param {ids图片id数组} options 
      */
     delPic(options) {
-        return axios.post('/image/delPic', qs.stringify(options));
+        return axios.post('/image/delPic', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     /**
-   * 上传网络图片
-   * @param {imgSrc 网络图片路径} options 
-   */
+     * 上传网络图片
+     * @param {imgSrc 网络图片路径} options 
+     */
     uploadWebImg(options) {
-        return axios.post('/image/uploadWebImg', qs.stringify(options));
+        return axios.post('/image/uploadWebImg', qs.stringify(options), {
+            headers: {'FormsCookieName': this.props.FormsCookieName}
+        });
     }
     render() {
         const {
@@ -766,9 +839,9 @@ class App extends Component {
                 <Spin className="basic-spin" spinning={loading} size="large" />
                 <Header className="header">
                     <div className="logo-box">
-                        <div className="logo"></div>
+                        <div className="logo" style={{ backgroundImage: "url('" + this.props.LogoAdrees + "')" }}></div>
                         <Divider type="vertical" />
-                        <span className="font-16">图片库</span>
+                        <span className="font-16">{this.props.GalleryName}</span>
                     </div>
                     <div className="user-info">
                         {
@@ -898,7 +971,7 @@ class App extends Component {
                                             beforeUpload={this.handleBeforeUpload.bind(this)}
                                             onChange={this.handleReplacePic.bind(this)}
                                         >
-                                            <span ref={span => this.replaceImgDom = span} style={{ color: '#03A9F4' }}>替换</span>
+                                            <span ref={span => this.replaceImgDom = span}></span>
                                         </Upload>
                                     </div>
                                     :
@@ -985,7 +1058,7 @@ class App extends Component {
                                     imgList.map(item => (
                                         <div
                                             className={selectListIds.includes(item.id) ? 'pic-item active' : 'pic-item'}
-                                            key={item.id}
+                                            key={item.id + ''}
                                             ref="picItem"
                                             onMouseEnter={e => this.handleListEnter(e, item)}
                                             onMouseLeave={e => this.handleListLeave(e)}
@@ -1027,7 +1100,7 @@ class App extends Component {
                                                         </div>
                                                         <CopyToClipboard
                                                             className="btn-item"
-                                                            text={item.ossPath ? item.ossPath : item.path}
+                                                            text={item.ossPath}
                                                             onCopy={(text, result) => this.handleCopyLink(text, result)}
                                                         >
                                                             <span>链接</span>
@@ -1115,7 +1188,7 @@ class App extends Component {
                                                 <div><Icon type="plus" /></div>
                                         }
                                     </Upload>
-                                    <div style={{ marginLeft: 66, color: '#bfbfbf' }}>仅支持gif，jpeg，png，bmp4种格式，大小不超过5.0MB</div>
+                                    <div style={{ marginLeft: 66, color: '#bfbfbf' }}>仅支持gif，jpg，jpeg，png 4种格式，大小不超过5.0MB</div>
                                 </div>
                             </Tabs.TabPane>
                             <Tabs.TabPane tab="网络图片" key="2">

@@ -1,18 +1,24 @@
 import axios from 'axios';
-import { message } from 'antd';
 
 // 添加请求拦截器
 axios.interceptors.request.use(config => {
     // 在发送请求之前做些什么
     //获取cookie
-    // let cookie = getCookie('online.xiaokeduo.com');
-    // let localCookie = window.localStorage.getItem("userId");
-    // if(!cookie) {
-    //     window.location.href = "https://passport-online.xiaokeduo.com?ReturnUrl=https://tu-online.xiaokeduo.com";
-    // }else if(localCookie !== cookie) {
-    //     window.localStorage.setItem("userId", cookie);   //重置缓存
-    //     window.location.reload();  //刷新页面
-    // }
+    if (config.url !== '/ConfigAppsetting/GetConfig') {
+        let cookie = getCookie(config.headers.FormsCookieName);
+        let localCookie = window.localStorage.getItem("userId");
+        if (!cookie) {
+            console.log('no cookie')
+            // window.location.href = "https://passport-online.xiaokeduo.com?ReturnUrl=https://tu-online.xiaokeduo.com";
+        } else if (localCookie !== cookie) {
+            console.log(localCookie, cookie)
+            console.log(localCookie === cookie)
+            alert(localCookie, cookie)
+            window.localStorage.setItem("userId", cookie); //重置缓存 
+            window.localStorage.setItem("userChange", 'change'); 
+            // window.location.reload(); //刷新页面
+        }
+    }
     return config;
 }, error => {
     // 对请求错误做些什么
