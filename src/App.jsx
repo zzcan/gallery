@@ -107,8 +107,6 @@ class App extends Component {
                         });
                     }
                 })
-            } else if (res.data.Code === 403) {
-                window.location.href = res.data.Msg;
             }
         })
     }
@@ -176,7 +174,7 @@ class App extends Component {
                     imgList: [],
                     imgTotal: 0
                 })
-            }else {
+            } else {
                 message.error(res.data.Msg);
                 this.setState({
                     confirmLoading: false,
@@ -184,6 +182,10 @@ class App extends Component {
                     iptCategoryName: '',
                 })
             }
+        }).catch(err => {
+            this.setState({
+                confirmLoading: false,
+            })
         })
     }
     // 分组重命名
@@ -210,10 +212,16 @@ class App extends Component {
                 })
                 this.setState({
                     categories,
-                    confirmLoading: false,
                     iptCateName: '',
                 })
             }
+            this.setState({
+                confirmLoading: false,
+            })
+        }).catch(err => {
+            this.setState({
+                confirmLoading: false,
+            })
         })
     }
     // menu popover取消按钮
@@ -253,6 +261,13 @@ class App extends Component {
                     confirmLoading: false,
                 })
             }
+            this.setState({
+                confirmLoading: false,
+            })
+        }).catch(err => {
+            this.setState({
+                confirmLoading: false,
+            })
         })
     }
     // 删除分组
@@ -282,6 +297,11 @@ class App extends Component {
                     listLoading: false,
                 });
             }
+        }).catch(err => {
+            this.setState({
+                listLoading: false,
+                confirmLoading: false,
+            })
         })
     }
     // 搜索图片  当前分组下搜索图片
@@ -293,10 +313,16 @@ class App extends Component {
                 this.setState({
                     imgList: res.data.Data.data,
                     imgTotal: res.data.Data.total,
-                    listLoading: false,
                     pageSize: initPageSize
                 });
             }
+            this.setState({
+                listLoading: false,
+            })
+        }).catch(err => {
+            this.setState({
+                listLoading: false,
+            })
         })
     }
     /**
@@ -443,8 +469,16 @@ class App extends Component {
                         allChecked: false,
                         pageSize: initPageSize
                     });
+                }).catch(err => {
+                    this.setState({
+                        confirmLoading: false,
+                    })
                 })
             }
+        }).catch(err => {
+            this.setState({
+                confirmLoading: false,
+            })
         })
     }
     /**
@@ -550,6 +584,8 @@ class App extends Component {
                             pageSize: initPageSize,
                             uploadModalVisible: false,
                         });
+                    }else {
+                        message.success('提取网络图片失败!');
                     }
                 })
             }
@@ -696,19 +732,19 @@ class App extends Component {
     // 获取用户信息
     getUserInfo() {
         return axios.get('/image/getUserInfo', {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     // 获取分组
     getCategory(options) {
         return axios.get('/image/getCategory', {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     // 获取容量信息
     getSpace(options) {
         return axios.get('/image/getSpace', {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -721,9 +757,9 @@ class App extends Component {
      * @param {categoryId, searchName 可选, pageIndex, pageSize, sortParameter} options 
      */
     getList(options) {
-        return axios.get('/image/getList', { 
+        return axios.get('/image/getList', {
             params: options,
-            headers: {'FormsCookieName': this.props.FormsCookieName} 
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -731,9 +767,9 @@ class App extends Component {
      * @param {categoryId, searchName 可选, pageIndex, pageSize} options 
      */
     getPicInfo(url, options) {
-        return axios.get(url, { 
+        return axios.get(url, {
             params: options,
-            headers: {'FormsCookieName': this.props.FormsCookieName} 
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -742,7 +778,7 @@ class App extends Component {
      */
     addCategory(options) {
         return axios.post('/image/addCategory', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -751,7 +787,7 @@ class App extends Component {
      */
     categoryRename(options) {
         return axios.post('/image/categoryRename', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -760,7 +796,7 @@ class App extends Component {
     */
     picRename(options) {
         return axios.post('/image/picRename', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -769,7 +805,7 @@ class App extends Component {
      */
     delCategory(options) {
         return axios.post('/image/delCategory', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -778,7 +814,7 @@ class App extends Component {
      */
     moveCategory(options) {
         return axios.post('/image/moveCategory', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -787,7 +823,7 @@ class App extends Component {
      */
     delPic(options) {
         return axios.post('/image/delPic', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     /**
@@ -796,7 +832,7 @@ class App extends Component {
      */
     uploadWebImg(options) {
         return axios.post('/image/uploadWebImg', qs.stringify(options), {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+            headers: { 'FormsCookieName': this.props.FormsCookieName }
         });
     }
     render() {
@@ -848,7 +884,7 @@ class App extends Component {
                                 <Avatar size="small" icon="user" />
                         }
                         <span className="user-name color-26">{user.name || ''}</span>
-                        <span className="sign-out" onClick={() => {window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout`}}>退出</span>
+                        <span className="sign-out" onClick={() => { window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout` }}>退出</span>
                     </div>
                 </Header>
                 <Layout>
@@ -871,7 +907,7 @@ class App extends Component {
                                     >
                                         {v.categoryName}
                                         {
-                                            v.menuMouseEnter ?
+                                            v.menuMouseEnter && v.categoryId !== 0 && v.categoryId !== -1 ?
                                                 <div style={{ float: 'right' }} onClick={e => e.stopPropagation()}>
                                                     <Popover
                                                         className="renamePopover"
@@ -940,7 +976,7 @@ class App extends Component {
                         <div className="capacity">
                             <Progress type="dashboard" percent={capacity.percent || 0} width={48} />
                             <span className="capacity-text">{capacity.usedSpace}/{capacity.totalSize}</span>
-                            <span className="blue-6" style={{ cursor: 'pointer' }} onClick={() => {window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}`}}>扩容</span>
+                            <span className="blue-6" style={{ cursor: 'pointer' }} onClick={() => { window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}` }}>扩容</span>
                         </div>
                     </Sider>
                     <Content className="content clearfix">
