@@ -11,6 +11,14 @@ export default class Wrapper extends Component {
     }
     componentDidMount() {
         axios.get('/ConfigAppsetting/GetConfig').then(res => {
+            window.localStorage.removeItem('config');
+            window.localStorage.setItem('config', JSON.stringify(res.data));
+
+            let link = document.createElement("link");
+            link.href = res.data.IcoUrl;
+            link.rel = "shortcut icon";
+            document.head.appendChild(link);
+
             this.setState({ pageConfig: res.data })
         })
     }

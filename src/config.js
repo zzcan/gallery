@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { message } from 'antd';
 
 // 添加请求拦截器
 axios.interceptors.request.use(config => {
@@ -8,15 +9,14 @@ axios.interceptors.request.use(config => {
         let cookie = getCookie(config.headers.FormsCookieName);
         let localCookie = window.localStorage.getItem("userId");
         if (!cookie) {
-            console.log('no cookie')
-            // window.location.href = "https://passport-online.xiaokeduo.com?ReturnUrl=https://tu-online.xiaokeduo.com";
+            alert('cookie', cookie);
+            let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
+            window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
         } else if (localCookie !== cookie) {
-            console.log(localCookie, cookie)
-            console.log(localCookie === cookie)
-            alert(localCookie, cookie)
+            alert(localCookie, cookie);
             window.localStorage.setItem("userId", cookie); //重置缓存 
             window.localStorage.setItem("userChange", 'change'); 
-            // window.location.reload(); //刷新页面
+            window.location.reload(); //刷新页面
         }
     }
     return config;
@@ -28,9 +28,23 @@ axios.interceptors.request.use(config => {
 // 添加响应拦截器
 axios.interceptors.response.use(response => {
     // 对响应数据做点什么
+    let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
+    //未登录
+    if(response.data.Code === 403) {
+        window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
+    }
     return response;
 }, error => {
     // 对响应错误做点什么
+    if(error.response.config.params && error.response.config.params['x-oss-process'] === "image/info") return Promise.reject(error);
+    if(error.response.status === 500) {
+        message.error('服务器错误！')
+        console.log(error.response.status)
+    }
+    if(error.response.status === 404) {
+        message.error('网络错误！')
+        console.log(error.response.status)
+    }
     return Promise.reject(error);
 });
 

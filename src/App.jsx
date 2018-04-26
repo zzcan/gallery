@@ -73,6 +73,7 @@ class App extends Component {
                 description: '系统检测到当前登录账号发生变更，请确认无误后进行数据操作。'
             });
         }
+        //判断列表一行显示的图片个数
         const wrapperWidth = this.refs.picWrapper.clientWidth;
         const marginLeft = 20;
         const picItemWidth = 180;
@@ -110,12 +111,6 @@ class App extends Component {
                 window.location.href = res.data.Msg;
             }
         })
-    }
-    componentWillReceiveProps(nextProps) {
-        var link = document.createElement("link");
-        link.href = nextProps.IcoUrl;
-        link.rel = "shortcut icon";
-        document.head.appendChild(link);
     }
     /**
      * 选中分组的回调
@@ -195,7 +190,7 @@ class App extends Component {
     handleCateRename(id) {
         const { iptCateName, categories } = this.state;
         if (!iptCateName || id === 0) {
-            message.error(!iptCateName ? '修改的名称不能为空!' : '未分组不能更改名称!');
+            message.error(!iptCateName ? '修改的名称不能为空!' : '默认分组不能更改名称!');
             return;
         }
         if (iptCateName.length > 6) {
@@ -264,7 +259,7 @@ class App extends Component {
     handleDeleteCategory(id) {
         const { categories, initPageSize, sortParameter } = this.state;
         if (id === 0) {
-            message.error('未分组不能删除!');
+            message.error('默认分组不能删除!');
             return;
         }
         this.setState({ confirmLoading: true })
@@ -726,8 +721,9 @@ class App extends Component {
      * @param {categoryId, searchName 可选, pageIndex, pageSize, sortParameter} options 
      */
     getList(options) {
-        return axios.get('/image/getList', { params: options }, {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+        return axios.get('/image/getList', { 
+            params: options,
+            headers: {'FormsCookieName': this.props.FormsCookieName} 
         });
     }
     /**
@@ -735,8 +731,9 @@ class App extends Component {
      * @param {categoryId, searchName 可选, pageIndex, pageSize} options 
      */
     getPicInfo(url, options) {
-        return axios.get(url, { params: options }, {
-            headers: {'FormsCookieName': this.props.FormsCookieName}
+        return axios.get(url, { 
+            params: options,
+            headers: {'FormsCookieName': this.props.FormsCookieName} 
         });
     }
     /**
@@ -851,7 +848,7 @@ class App extends Component {
                                 <Avatar size="small" icon="user" />
                         }
                         <span className="user-name color-26">{user.name || ''}</span>
-                        <span className="sign-out">退出</span>
+                        <span className="sign-out" onClick={() => {window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout`}}>退出</span>
                     </div>
                 </Header>
                 <Layout>
@@ -943,7 +940,7 @@ class App extends Component {
                         <div className="capacity">
                             <Progress type="dashboard" percent={capacity.percent || 0} width={48} />
                             <span className="capacity-text">{capacity.usedSpace}/{capacity.totalSize}</span>
-                            <span className="blue-6" style={{ cursor: 'pointer' }}>扩容</span>
+                            <span className="blue-6" style={{ cursor: 'pointer' }} onClick={() => {window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}`}}>扩容</span>
                         </div>
                     </Sider>
                     <Content className="content clearfix">
@@ -1182,7 +1179,7 @@ class App extends Component {
                                         onRemove={this.handleImgRemove.bind(this)}
                                     >
                                         {
-                                            fileList.length >= 10 ?
+                                            fileList.length >= 9 ?
                                                 null
                                                 :
                                                 <div><Icon type="plus" /></div>

@@ -8,6 +8,7 @@
 
 # production
 /build
+/server
 
 # misc
 .DS_Store
@@ -21,5 +22,3 @@ yarn-debug.log*
 yarn-error.log*
 
 imageSpace.conf
-
-/server/public
