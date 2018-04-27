@@ -223,6 +223,7 @@
     justify-content: flex-start;
     flex-wrap: wrap;
     width: 100%;
+    margin-left: -10px;
     position: relative;
     /* width: 1000px;
     margin: 0 auto; */
@@ -234,7 +235,7 @@
     /* float: left; */
     width: 180px;
     height: 222px;
-    margin-bottom: 20px;
+    margin: 0 10px 10px;
     border: 1px solid #f7f7f7;
     background: #fff;
     box-sizing: border-box;
@@ -242,9 +243,6 @@
     cursor: pointer;
 }
 
-.pic-container .pic-item:not(:last-of-type) {
-    margin-right: 20px;
-} 
 .pic-container .pic-item.active {
     position: relative;
     border-color: #03A9F4;

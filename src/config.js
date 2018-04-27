@@ -28,10 +28,12 @@ axios.interceptors.request.use(config => {
 // 添加响应拦截器
 axios.interceptors.response.use(response => {
     // 对响应数据做点什么
-    let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
-    //未登录
-    if(response.data.Code === 403) {
-        window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
+    if(response.config.url !== '/ConfigAppsetting/GetConfig') {
+        let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
+        //未登录
+        if(response.data.Code === 403) {
+            window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
+        }
     }
     return response;
 }, error => {
@@ -39,11 +41,9 @@ axios.interceptors.response.use(response => {
     if(error.response.config.params && error.response.config.params['x-oss-process'] === "image/info") return Promise.reject(error);
     if(error.response.status === 500) {
         message.error('服务器错误！')
-        console.log(error.response.status)
     }
     if(error.response.status === 404) {
         message.error('网络错误！')
-        console.log(error.response.status)
     }
     return Promise.reject(error);
 });

@@ -73,14 +73,6 @@ class App extends Component {
                 description: '系统检测到当前登录账号发生变更，请确认无误后进行数据操作。'
             });
         }
-        //判断列表一行显示的图片个数
-        const wrapperWidth = this.refs.picWrapper.clientWidth;
-        const marginLeft = 20;
-        const picItemWidth = 180;
-        let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft)) - 1;
-        const menuDom = ReactDOM.findDOMNode(this.refs.layoutMenu);
-
-        this.setState({ pageSize: 2 * i, initPageSize: 2 * i, menuDom });
         this.getUserInfo().then(res => {
             if (res.data.Code === 0) {
                 this.setState({ user: res.data.Data });
@@ -95,15 +87,23 @@ class App extends Component {
                         this.setState({
                             categories: res.data.Data,
                             selectedCategory: { categoryName, id }
-                        });
-                        return this.getList({ categoryId: id, pageIndex: 1, pageSize: 2 * i, sortParameter: this.state.sortParameter });
-                    }
-                }).then(res => {
-                    if (res.data.Code === 0) {
-                        this.setState({
-                            loading: false,
-                            imgList: res.data.Data.data,
-                            imgTotal: res.data.Data.total,
+                        }, () => {
+                            console.log(this.refs.picWrapper.clientWidth)
+                            //判断列表一行显示的图片个数
+                            const wrapperWidth = this.refs.picWrapper.clientWidth;
+                            const marginLeft = 20;
+                            const picItemWidth = 180;
+                            let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft));
+                            this.setState({ pageSize: 2 * i, initPageSize: 2 * i });
+                            this.getList({ categoryId: id, pageIndex: 1, pageSize: 2 * i, sortParameter: this.state.sortParameter }).then(res => {
+                                if (res.data.Code === 0) {
+                                    this.setState({
+                                        loading: false,
+                                        imgList: res.data.Data.data,
+                                        imgTotal: res.data.Data.total,
+                                    });
+                                }
+                            })
                         });
                     }
                 })
@@ -242,8 +242,9 @@ class App extends Component {
     }
     // 图片重命名
     renamePics(id) {
-        const { iptPicName, imgList } = this.state;
+        let { iptPicName, imgList } = this.state;
         if (!iptPicName) return message.error('请输入图片名!');
+        iptPicName += imgList.filter(v => v.id === id).suffix;
         this.setState({ confirmLoading: true });
         this.picRename({ id, name: iptPicName }).then(res => {
             if (res.data.Code === 0) {
@@ -336,12 +337,14 @@ class App extends Component {
     // 图片列表popover
     handleListPopover(visible, id, name) {
         const { imgList } = this.state;
+        let { suffix, unsuffix } = formatPicName(name);
         imgList.forEach(v => {
             v.popoverVisible = v.id === id;
+            if(v.id === id) v.suffix = suffix;
         })
         this.setState({
             imgList,
-            iptPicName: name
+            iptPicName: unsuffix
         });
     }
     // 分组popover    
@@ -584,7 +587,7 @@ class App extends Component {
                             pageSize: initPageSize,
                             uploadModalVisible: false,
                         });
-                    }else {
+                    } else {
                         message.success('提取网络图片失败!');
                     }
                 })
@@ -668,6 +671,8 @@ class App extends Component {
         }
     }
     handleReplaceImg(id) {
+        const { selectedCategory } = this.state;
+        if (selectedCategory.id === -1) return message.error('商品评图图片不能替换！');
         this.setState({ replaceImgId: id }, () => {
             this.replaceImgDom.click()
         })
@@ -907,7 +912,7 @@ class App extends Component {
                                     >
                                         {v.categoryName}
                                         {
-                                            v.menuMouseEnter && v.categoryId !== 0 && v.categoryId !== -1 ?
+                                            v.menuMouseEnter && v.id !== 0 && v.id !== -1 ?
                                                 <div style={{ float: 'right' }} onClick={e => e.stopPropagation()}>
                                                     <Popover
                                                         className="renamePopover"
@@ -1016,7 +1021,7 @@ class App extends Component {
                                 <div className="oprate-tab clearfix">
                                     <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
                                     {
-                                        selectListIds.length ?
+                                        selectListIds.length && selectedCategory.id !== -1 ?
                                             <div className="opration-text">
                                                 <Popover
                                                     className="renamePopover"
@@ -1141,7 +1146,7 @@ class App extends Component {
                                                         <span className="btn-item" onClick={() => { this.showModal({ type: 'previewModal', previewImage: item.path, selectedPicLink: item.path }) }}>查看</span>
                                                     </div>
                                                     :
-                                                    <div className="pic-name">{item.name}</div>
+                                                    <div className="pic-name">{formatPicName(item.name).newName}</div>
                                             }
                                         </div>
                                     ))
@@ -1252,5 +1257,20 @@ class App extends Component {
         );
     }
 }
-
+function formatPicName(name) {
+    let suffix = '';
+    let unsuffix = '';
+    let newName = name.replace(/((\S{6})(.*))(\.[A-Za-z]{3,4})$/g, function (match, $1, $2, $3, $4) {
+        if($3) {
+            unsuffix = $3;
+            if($3.length > 4) return $1 + '...' + $3;
+        }
+        return name;
+    })
+    return {
+        newName,
+        suffix,
+        unsuffix: unsuffix || name,
+    }
+}
 export default App;
