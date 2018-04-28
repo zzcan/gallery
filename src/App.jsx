@@ -244,7 +244,7 @@ class App extends Component {
     renamePics(id) {
         let { iptPicName, imgList } = this.state;
         if (!iptPicName) return message.error('请输入图片名!');
-        iptPicName += imgList.filter(v => v.id === id).suffix;
+        iptPicName += imgList.filter(v => v.id === id)[0].suffix;
         this.setState({ confirmLoading: true });
         this.picRename({ id, name: iptPicName }).then(res => {
             if (res.data.Code === 0) {
@@ -340,7 +340,7 @@ class App extends Component {
         let { suffix, unsuffix } = formatPicName(name);
         imgList.forEach(v => {
             v.popoverVisible = v.id === id;
-            if(v.id === id) v.suffix = suffix;
+            if (v.id === id) v.suffix = suffix;
         })
         this.setState({
             imgList,
@@ -642,15 +642,24 @@ class App extends Component {
             allChecked: false,
             selectListIds: [],
         });
-        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+        this.getCategory().then(res => {
             if (res.data.Code === 0) {
+                const { categoryName, id } = res.data.Data[0];
                 this.setState({
-                    imgList: res.data.Data.data,
-                    imgTotal: res.data.Data.total,
-                    pageSize: initPageSize,
+                    categories: res.data.Data,
+                    selectedCategory
+                });
+                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                    if (res.data.Code === 0) {
+                        this.setState({
+                            imgList: res.data.Data.data,
+                            imgTotal: res.data.Data.total,
+                            pageSize: initPageSize,
+                        });
+                    }
                 });
             }
-        })
+        });
     }
     // 图片替换
     handleReplacePic({ file }) {
@@ -733,6 +742,10 @@ class App extends Component {
         if (maskDom.className) {
             this.setState({ previewModalVisible: false })
         }
+    }
+    // 退出
+    handleSigout() {
+        window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout`
     }
     // 获取用户信息
     getUserInfo() {
@@ -877,7 +890,7 @@ class App extends Component {
                 <Spin className="basic-spin" spinning={loading} size="large" />
                 <Header className="header">
                     <div className="logo-box">
-                        <div className="logo" style={{ backgroundImage: "url('" + this.props.LogoAdrees + "')" }}></div>
+                        <div className="logo" style={{ backgroundImage: "url('" + this.props.GalleryLogo + "')" }}></div>
                         <Divider type="vertical" />
                         <span className="font-16">{this.props.GalleryName}</span>
                     </div>
@@ -889,7 +902,7 @@ class App extends Component {
                                 <Avatar size="small" icon="user" />
                         }
                         <span className="user-name color-26">{user.name || ''}</span>
-                        <span className="sign-out" onClick={() => { window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout` }}>退出</span>
+                        <span className="sign-out" onClick={() => this.handleSigout()}>退出</span>
                     </div>
                 </Header>
                 <Layout>
@@ -1260,11 +1273,10 @@ class App extends Component {
 function formatPicName(name) {
     let suffix = '';
     let unsuffix = '';
-    let newName = name.replace(/((\S{6})(.*))(\.[A-Za-z]{3,4})$/g, function (match, $1, $2, $3, $4) {
-        if($3) {
-            unsuffix = $3;
-            if($3.length > 4) return $1 + '...' + $3;
-        }
+    let newName = name.replace(/((\S{8})(.*))(\.[A-Za-z]{3,4})$/g, function (match, $1, $2, $3, $4) {
+        unsuffix = $1;
+        if ($4) suffix = $4;
+        if ($3 && $3.length > 4) return $2 + '...' + $4;
         return name;
     })
     return {
