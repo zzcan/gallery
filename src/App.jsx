@@ -243,14 +243,13 @@ class App extends Component {
     renamePics(id) {
         let { iptPicName, imgList } = this.state;
         if (!iptPicName) return message.error('请输入图片名!');
-        iptPicName += imgList.filter(v => v.id === id)[0].suffix;
         this.setState({ confirmLoading: true });
         this.picRename({ id, name: iptPicName }).then(res => {
             if (res.data.Code === 0) {
                 message.success('修改图片名称成功!');
                 imgList.forEach(v => {
                     if (v.id === id) {
-                        v.name = iptPicName;
+                        v.name = iptPicName + imgList.filter(v => v.id === id)[0].suffix;
                         v.popoverVisible = false;
                     }
                 })
