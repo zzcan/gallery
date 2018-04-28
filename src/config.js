@@ -9,11 +9,9 @@ axios.interceptors.request.use(config => {
         let cookie = getCookie(config.headers.FormsCookieName);
         let localCookie = window.localStorage.getItem("userId");
         if (!cookie) {
-            alert('cookie', cookie);
             let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
             window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
         } else if (localCookie !== cookie) {
-            alert(localCookie, cookie);
             window.localStorage.setItem("userId", cookie); //重置缓存 
             window.localStorage.setItem("userChange", 'change'); 
             window.location.reload(); //刷新页面

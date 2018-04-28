@@ -88,14 +88,13 @@ class App extends Component {
                             categories: res.data.Data,
                             selectedCategory: { categoryName, id }
                         }, () => {
-                            console.log(this.refs.picWrapper.clientWidth)
                             //判断列表一行显示的图片个数
                             const wrapperWidth = this.refs.picWrapper.clientWidth;
                             const marginLeft = 20;
                             const picItemWidth = 180;
                             let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft));
-                            this.setState({ pageSize: 2 * i, initPageSize: 2 * i });
-                            this.getList({ categoryId: id, pageIndex: 1, pageSize: 2 * i, sortParameter: this.state.sortParameter }).then(res => {
+                            this.setState({ pageSize: 4 * i, initPageSize: 4 * i });
+                            this.getList({ categoryId: id, pageIndex: 1, pageSize: 4 * i, sortParameter: this.state.sortParameter }).then(res => {
                                 if (res.data.Code === 0) {
                                     this.setState({
                                         loading: false,
@@ -489,20 +488,32 @@ class App extends Component {
      * @param {String} ids
      */
     handleDeletePic() {
-        const { selectListIds, selectedCategory, pageIndex, pageSize, sortParameter } = this.state;
+        const { selectListIds, selectedCategory, pageIndex, initPageSize, sortParameter } = this.state;
         // 批量删除且并未有任何图片选中
         if (!selectListIds.length) return message.error('请选择需要删除的图片');
         this.delPic({ ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
                 message.success('删除图片成功!');
-                this.getList({ categoryId: selectedCategory.id, pageIndex, pageSize, sortParameter }).then(res => {
-                    this.setState({
-                        imgList: res.data.Data.data,
-                        imgTotal: res.data.Data.total,
-                        allChecked: false,
-                        selectListIds: [],
-                    });
-                })
+                this.getCategory().then(res => {
+                    if (res.data.Code === 0) {
+                        const { categoryName, id } = res.data.Data[0];
+                        this.setState({
+                            categories: res.data.Data,
+                            selectedCategory
+                        });
+                        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                            if (res.data.Code === 0) {
+                                this.setState({
+                                    imgList: res.data.Data.data,
+                                    imgTotal: res.data.Data.total,
+                                    pageSize: initPageSize,
+                                    allChecked: false,
+                                    selectListIds: [],
+                                });
+                            }
+                        });
+                    }
+                });
             }
             this.setState({ picDelPopoverVisible: false })
         }).catch(err => {
@@ -602,7 +613,6 @@ class App extends Component {
         if (!isLtMax) {
             message.error(`文件大小超过${MAXFILESIZE}M限制`);
         }
-        console.log('isLtMax', isLtMax)
         return isLtMax;
     }
     // 图片上传改变的状态
@@ -613,11 +623,7 @@ class App extends Component {
     handleImgRemove(file) {
         const { response } = file;
         if (response && response.Code === 0) {
-            this.delPic({ ids: [response.Data.id] }).then(res => {
-                if (res.data.Code === 0) {
-                    console.log('pic delete success')
-                }
-            })
+            this.delPic({ ids: [response.Data.id] })
         }
     }
     // 上传图片弹窗取消按钮操作
@@ -629,11 +635,7 @@ class App extends Component {
                 if (file.response && file.response.Code === 0) ids.push(file.response.Data);
             })
             if (ids.length > 0) {
-                this.delPic({ ids: ids.join(',') }).then(res => {
-                    if (res.data.Code === 0) {
-                        console.log('pics delete success')
-                    }
-                });
+                this.delPic({ ids: ids.join(',') });
             }
         }
         this.setState({
@@ -884,7 +886,7 @@ class App extends Component {
             addCatePopoverVisible,
             initPageSize
         } = this.state;
-        const pageSizeOptions = [`${initPageSize * 1}`, `${initPageSize * 2}`, `${initPageSize * 3}`, `${initPageSize * 4}`]
+        const pageSizeOptions = [`${initPageSize * 1}`, `${initPageSize * 2}`, `${initPageSize * 3}`]
         return (
             <Layout className="basic-layout">
                 <Spin className="basic-spin" spinning={loading} size="large" />
@@ -1178,7 +1180,7 @@ class App extends Component {
                         {
                             imgList.length ?
                                 <Pagination
-                                    style={{ float: 'right' }}
+                                    style={{ float: 'right', marginTop: 10 }}
                                     showTotal={total => `共${total}条记录`}
                                     showQuickJumper
                                     showSizeChanger
@@ -1279,10 +1281,16 @@ function formatPicName(name) {
         if ($3 && $3.length > 4) return $2 + '...' + $4;
         return name;
     })
+    if (!unsuffix) {
+        unsuffix = name.replace(/(\S*)(\.[A-Za-z]{3,4})$/g, function (match, $1, $2) {
+            suffix = $2
+            return $1;
+        })
+    }
     return {
         newName,
         suffix,
-        unsuffix: unsuffix || name,
+        unsuffix,
     }
 }
 export default App;
