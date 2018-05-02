@@ -460,21 +460,28 @@ class App extends Component {
         this.setState({ confirmLoading: true });
         this.moveCategory({ categoryId: movedCategoryId, ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
-                message.success('修改分组成功!')
-                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
-                    this.setState({
-                        imgList: res.data.Data.data,
-                        imgTotal: res.data.Data.total,
-                        confirmLoading: false,
-                        selectListIds: [],
-                        allChecked: false,
-                        pageSize: initPageSize
-                    });
-                }).catch(err => {
-                    this.setState({
-                        confirmLoading: false,
-                    })
-                })
+                message.success('修改分组成功!');
+                this.getCategory().then(res => {
+                    if (res.data.Code === 0) {
+                        const { categoryName, id } = res.data.Data[0];
+                        this.setState({
+                            categories: res.data.Data,
+                            selectedCategory
+                        });
+                        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                            if (res.data.Code === 0) {
+                                this.setState({
+                                    imgList: res.data.Data.data,
+                                    imgTotal: res.data.Data.total,
+                                    pageSize: initPageSize,
+                                    allChecked: false,
+                                    selectListIds: [],
+                                    confirmLoading: false,
+                                });
+                            }
+                        });
+                    }
+                });
             }
         }).catch(err => {
             this.setState({
@@ -893,7 +900,7 @@ class App extends Component {
                     <div className="logo-box">
                         <div className="logo" style={{ backgroundImage: "url('" + this.props.GalleryLogo + "')" }}></div>
                         <Divider type="vertical" />
-                        <span className="font-16">{this.props.GalleryName}</span>
+                        <span className="font-16">图片库</span>
                     </div>
                     <div className="user-info">
                         {
@@ -1033,7 +1040,12 @@ class App extends Component {
                         {
                             imgList.length ?
                                 <div className="oprate-tab clearfix">
-                                    <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
+                                    {
+                                        selectedCategory.id !== -1 ?
+                                        <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
+                                        :
+                                        null
+                                    }
                                     {
                                         selectListIds.length && selectedCategory.id !== -1 ?
                                             <div className="opration-text">
@@ -1051,7 +1063,7 @@ class App extends Component {
                                                                 filterOption={(input, option) => option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
                                                             >
                                                                 {
-                                                                    categories.map(v => <Select.Option value={v.id} key={v.id}>{v.categoryName}</Select.Option>)
+                                                                    categories.filter(v => v.id !== -1).map(v => <Select.Option value={v.id} key={v.id}>{v.categoryName}</Select.Option>)
                                                                 }
                                                             </Select>
                                                         </div>
@@ -1109,14 +1121,14 @@ class App extends Component {
                                 imgList.length ?
                                     imgList.map(item => (
                                         <div
-                                            className={selectListIds.includes(item.id) ? 'pic-item active' : 'pic-item'}
+                                            className={selectListIds.includes(item.id) && selectedCategory.id !== -1 ? 'pic-item active' : 'pic-item'}
                                             key={item.id + ''}
                                             ref="picItem"
                                             onMouseEnter={e => this.handleListEnter(e, item)}
                                             onMouseLeave={e => this.handleListLeave(e)}
                                         >
                                             {
-                                                selectListIds.includes(item.id) ?
+                                                selectListIds.includes(item.id) && selectedCategory.id !== -1 ?
                                                     <div className="selected" >
                                                         <Icon type="check" style={{ fontSize: 18 }} />
                                                     </div>
@@ -1148,7 +1160,12 @@ class App extends Component {
                                                             <span className="btn-item">改名</span>
                                                         </Popover>
                                                         <div className="btn-item">
-                                                            <span onClick={() => this.handleReplaceImg(item.id)} style={{ color: '#03A9F4' }}>替换</span>
+                                                            {
+                                                                selectedCategory.id !== -1 ?
+                                                                <span onClick={() => this.handleReplaceImg(item.id)} style={{ color: '#03A9F4' }}>替换</span>
+                                                                :
+                                                                <span style={{ color: '#595959' }}>替换</span>                                                       
+                                                            }
                                                         </div>
                                                         <CopyToClipboard
                                                             className="btn-item"

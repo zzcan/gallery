@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { message } from 'antd';
+import { message, notification } from 'antd';
 
 // 添加请求拦截器
 axios.interceptors.request.use(config => {
@@ -9,6 +9,14 @@ axios.interceptors.request.use(config => {
         let cookie = getCookie(config.headers.FormsCookieName);
         let localCookie = window.localStorage.getItem("userId");
         if (!cookie) {
+            let count = window.localStorage.getItem('count') ? parseInt(window.localStorage.getItem('count')) : 0;
+            if(count === 2) {
+                return notification.error({
+                    message: '错误提示',
+                    description: '系统检测到服务器发生错误, 请重新登录！'
+                });
+            }
+            window.localStorage.setItem('count', count + 1);
             let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
             window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
         } else if (localCookie !== cookie) {
