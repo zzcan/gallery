@@ -22,9 +22,6 @@ export default class Wrapper extends Component {
             this.setState({ pageConfig: res.data })
         })
     }
-    componentWillUnmount() {
-        window.localStorage.removeItem('count');
-    }
     render() {
         const content = this.state.pageConfig.FormsCookieName ? <App {...this.state.pageConfig} /> : null
         return content
