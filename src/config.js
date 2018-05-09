@@ -21,8 +21,10 @@ axios.interceptors.request.use(config => {
             let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
             window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
         } else if (localCookie !== cookie) {
-            window.localStorage.setItem("userId", cookie); //重置缓存 
-            window.localStorage.setItem("userChange", 'change'); 
+            window.localStorage.setItem("userId", cookie); //重置缓存
+            if(localCookie) {
+                window.localStorage.setItem("userChange", 'change');
+            }
             window.location.reload(); //刷新页面
         }
     }
@@ -40,6 +42,8 @@ axios.interceptors.response.use(response => {
         //未登录
         if(response.data.Code === 403) {
             window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
+            window.localStorage.removeItem("userId");
+            window.localStorage.removeItem("userChange");
         }
     }
     return response;

@@ -753,6 +753,9 @@ class App extends Component {
     }
     // 退出
     handleSigout() {
+        window.localStorage.removeItem("userId");
+        window.localStorage.removeItem("userChange");
+        window.localStorage.removeItem("count");
         window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout`
     }
     // 获取用户信息
