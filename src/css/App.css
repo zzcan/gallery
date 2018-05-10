@@ -375,6 +375,7 @@
 .upload-modal .clearfix {
     height: 100%;
     margin-left: 16px;
+    overflow-y: scroll;
 }
 /* 空数据 */
 

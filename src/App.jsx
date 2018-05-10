@@ -18,7 +18,9 @@ import {
     Spin,
     Popover,
     Tabs,
-    notification
+    notification,
+    Row,
+    Col,
 } from 'antd';
 import axios from 'axios';
 import { CopyToClipboard } from 'react-copy-to-clipboard';   //复制到剪切板插件
@@ -613,13 +615,19 @@ class App extends Component {
     }
     // 图片上传前的回调
     handleBeforeUpload(file, fileList) {
+        console.log(fileList)
+        console.log(fileList.length)
+        const lengthFlag = fileList.length <= 50;
+        if(!lengthFlag) {
+            message.error('最多上传50张图片！');
+        }
         // 图片上传前验证其大小
         const MAXFILESIZE = 5;
         const isLtMax = file.size / 1024 / 1024 < MAXFILESIZE;
         if (!isLtMax) {
             message.error(`文件大小超过${MAXFILESIZE}M限制`);
         }
-        return isLtMax;
+        return isLtMax && lengthFlag;
     }
     // 图片上传改变的状态
     handleUploadChange({ fileList }) {
@@ -1051,9 +1059,9 @@ class App extends Component {
                                 <div className="oprate-tab clearfix">
                                     {
                                         selectedCategory.id !== -1 ?
-                                        <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
-                                        :
-                                        null
+                                            <Checkbox className="checkbox" checked={allChecked} onChange={e => this.handleAllChecked(e)}>全选</Checkbox>
+                                            :
+                                            null
                                     }
                                     {
                                         selectListIds.length && selectedCategory.id !== -1 ?
@@ -1171,9 +1179,9 @@ class App extends Component {
                                                         <div className="btn-item">
                                                             {
                                                                 selectedCategory.id !== -1 ?
-                                                                <span onClick={() => this.handleReplaceImg(item.id)} style={{ color: '#03A9F4' }}>替换</span>
-                                                                :
-                                                                <span style={{ color: '#595959' }}>替换</span>                                                       
+                                                                    <span onClick={() => this.handleReplaceImg(item.id)} style={{ color: '#03A9F4' }}>替换</span>
+                                                                    :
+                                                                    <span style={{ color: '#595959' }}>替换</span>
                                                             }
                                                         </div>
                                                         <CopyToClipboard
@@ -1245,28 +1253,34 @@ class App extends Component {
                         <Tabs defaultActiveKey="1" onChange={key => console.log(key)}>
                             <Tabs.TabPane tab="本地上传" key="1">
                                 <div className="clearfix">
-                                    <span style={{ float: 'left', marginRight: 12, height: '100%' }}>选择图片:</span>
-                                    <Upload
-                                        className="upload-box"
-                                        action="/image/uploadFiles"
-                                        data={{ categoryId: selectedCategory ? selectedCategory.id : null }}
-                                        listType="picture-card"
-                                        multiple
-                                        accept="image/jpg,image/jpeg,image/gif,image/png"
-                                        fileList={fileList}
-                                        showUploadList={{ showPreviewIcon: false }}
-                                        beforeUpload={this.handleBeforeUpload.bind(this)}
-                                        onChange={this.handleUploadChange.bind(this)}
-                                        onRemove={this.handleImgRemove.bind(this)}
-                                    >
-                                        {
-                                            fileList.length >= 9 ?
-                                                null
-                                                :
-                                                <div><Icon type="plus" /></div>
-                                        }
-                                    </Upload>
-                                    <div style={{ marginLeft: 66, color: '#bfbfbf' }}>仅支持gif，jpg，jpeg，png 4种格式，大小不超过5.0MB</div>
+                                    <Row>
+                                        <Col span={2}>选择图片:</Col>
+                                        <Col span={22}>
+                                            <div>
+                                                <Upload
+                                                    className="upload-box"
+                                                    action="/image/uploadFiles"
+                                                    data={{ categoryId: selectedCategory ? selectedCategory.id : null }}
+                                                    listType="picture-card"
+                                                    multiple
+                                                    accept="image/jpg,image/jpeg,image/gif,image/png"
+                                                    fileList={fileList}
+                                                    showUploadList={{ showPreviewIcon: false }}
+                                                    beforeUpload={this.handleBeforeUpload.bind(this)}
+                                                    onChange={this.handleUploadChange.bind(this)}
+                                                    onRemove={this.handleImgRemove.bind(this)}
+                                                >
+                                                    {
+                                                        fileList.length >= 50 ?
+                                                            null
+                                                            :
+                                                            <div><Icon type="plus" /></div>
+                                                    }
+                                                </Upload>
+                                                <div style={{ color: '#bfbfbf' }}>仅支持gif，jpg，jpeg，png 4种格式，大小不超过5.0MB</div>
+                                            </div>
+                                        </Col>
+                                    </Row>
                                 </div>
                             </Tabs.TabPane>
                             <Tabs.TabPane tab="网络图片" key="2">

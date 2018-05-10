@@ -11,7 +11,6 @@ axios.interceptors.request.use(config => {
         if (!cookie) {
             let count = window.localStorage.getItem('count') ? parseInt(window.localStorage.getItem('count')) : 0;
             if(count === 2) {
-                window.localStorage.removeItem('count');   
                 return notification.error({
                     message: '错误提示',
                     description: '系统检测到服务器发生错误, 请重新登录！'
