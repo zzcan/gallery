@@ -751,6 +751,12 @@ class App extends Component {
             this.setState({ previewModalVisible: false })
         }
     }
+    handleExpand() {
+        window.localStorage.removeItem("userId");
+        window.localStorage.removeItem("userChange");
+        window.localStorage.removeItem("count");
+        window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}`
+    }
     // 退出
     handleSigout() {
         window.localStorage.removeItem("userId");
@@ -1005,7 +1011,7 @@ class App extends Component {
                         <div className="capacity">
                             <Progress type="dashboard" percent={capacity.percent || 0} width={48} />
                             <span className="capacity-text">{capacity.usedSpace}/{capacity.totalSize}</span>
-                            <span className="blue-6" style={{ cursor: 'pointer' }} onClick={() => { window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}` }}>扩容</span>
+                            <span className="blue-6" style={{ cursor: 'pointer' }} onClick={() => this.handleExpand()}>扩容</span>
                         </div>
                     </Sider>
                     <Content className="content clearfix">
