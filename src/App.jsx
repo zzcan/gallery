@@ -615,23 +615,23 @@ class App extends Component {
     }
     // 图片上传前的回调
     handleBeforeUpload(file, fileList) {
-        console.log(fileList)
-        console.log(fileList.length)
-        const lengthFlag = fileList.length <= 50;
-        if(!lengthFlag) {
-            message.error('最多上传50张图片！');
-        }
         // 图片上传前验证其大小
         const MAXFILESIZE = 5;
         const isLtMax = file.size / 1024 / 1024 < MAXFILESIZE;
         if (!isLtMax) {
             message.error(`文件大小超过${MAXFILESIZE}M限制`);
         }
-        return isLtMax && lengthFlag;
+        // return isLtMax && fileList.length < 50;
+        return isLtMax;
     }
     // 图片上传改变的状态
-    handleUploadChange({ fileList }) {
-        this.setState({ fileList });
+    handleUploadChange(info) {
+        let fileList = info.fileList;
+        // let flag = fileList.every(v => {
+        //     return !v.status;
+        // });
+        // if(flag) return message.error('已达图片上传上限，最多可上传50张');
+        this.setState({fileList});
     }
     // 已上传的图片移除
     handleImgRemove(file) {
@@ -1277,7 +1277,7 @@ class App extends Component {
                                                             <div><Icon type="plus" /></div>
                                                     }
                                                 </Upload>
-                                                <div style={{ color: '#bfbfbf' }}>仅支持gif，jpg，jpeg，png 4种格式，大小不超过5.0MB</div>
+                                                <div style={{ color: '#bfbfbf', clear: 'both' }}>仅支持gif，jpg，jpeg，png 4种格式，大小不超过5.0MB</div>
                                             </div>
                                         </Col>
                                     </Row>
