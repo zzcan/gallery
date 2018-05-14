@@ -627,10 +627,9 @@ class App extends Component {
     // 图片上传改变的状态
     handleUploadChange(info) {
         let fileList = info.fileList;
-        // let flag = fileList.every(v => {
-        //     return !v.status;
-        // });
-        // if(flag) return message.error('已达图片上传上限，最多可上传50张');
+        fileList = fileList.filter(v => {
+            return !!v.status;
+        });
         this.setState({fileList});
     }
     // 已上传的图片移除
