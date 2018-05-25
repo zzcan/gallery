@@ -289,6 +289,8 @@ class App extends Component {
                 });
                 message.success('删除分组成功！')
                 return this.getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: initPageSize, sortParameter });
+            }else {
+                message.error('删除分组失败！')
             }
         }).then(res => {
             if (res.data.Code === 0) {
