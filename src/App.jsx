@@ -68,8 +68,8 @@ class App extends Component {
     }
     componentDidMount() {
         // 检测是否状态发生变化
-        if (window.localStorage.getItem("userChange")) {
-            window.localStorage.removeItem('userChange');
+        if (window.sessionStorage.getItem("userChange")) {
+            window.sessionStorage.removeItem('userChange');
             notification.warning({
                 message: '账号变更提醒',
                 description: '系统检测到当前登录账号发生变更，请确认无误后进行数据操作。'
@@ -761,16 +761,12 @@ class App extends Component {
         }
     }
     handleExpand() {
-        window.localStorage.removeItem("userId");
-        window.localStorage.removeItem("userChange");
-        window.localStorage.removeItem("count");
+        window.sessionStorage.removeItem("userId");
         window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}`
     }
     // 退出
     handleSigout() {
-        window.localStorage.removeItem("userId");
-        window.localStorage.removeItem("userChange");
-        window.localStorage.removeItem("count");
+        window.sessionStorage.removeItem("userId");
         window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout`
     }
     // 获取用户信息

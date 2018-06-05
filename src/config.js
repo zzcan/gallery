@@ -7,22 +7,22 @@ axios.interceptors.request.use(config => {
     //获取cookie
     if (config.url !== '/ConfigAppsetting/GetConfig') {
         let cookie = getCookie(config.headers.FormsCookieName);
-        let localCookie = window.localStorage.getItem("userId");
+        let localCookie = window.sessionStorage.getItem("userId");
         if (!cookie) {
-            let count = window.localStorage.getItem('count') ? parseInt(window.localStorage.getItem('count')) : 0;
+            let count = window.sessionStorage.getItem('count') ? parseInt(window.sessionStorage.getItem('count')) : 0;
             if(count === 2) {
                 return notification.error({
                     message: '错误提示',
                     description: '系统检测到服务器发生错误, 请重新登录！'
                 });
             }
-            window.localStorage.setItem('count', count + 1);
+            window.sessionStorage.setItem('count', count + 1);
             let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
             window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
         } else if (localCookie !== cookie) {
-            window.localStorage.setItem("userId", cookie); //重置缓存
+            window.sessionStorage.setItem("userId", cookie); //重置缓存
             if(localCookie) {
-                window.localStorage.setItem("userChange", 'change');
+                window.sessionStorage.setItem("userChange", 'change');
             }
             window.location.reload(); //刷新页面
         }
@@ -40,9 +40,8 @@ axios.interceptors.response.use(response => {
         let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.localStorage.getItem("config"));
         //未登录
         if(response.data.Code === 403) {
+            window.sessionStorage.removeItem("userId");
             window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
-            window.localStorage.removeItem("userId");
-            window.localStorage.removeItem("userChange");
         }
     }
     return response;
