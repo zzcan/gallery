@@ -19,6 +19,7 @@ export default class Wrapper extends Component {
             link.rel = "shortcut icon";
             document.head.appendChild(link);
             this.setState({ pageConfig: res.data });
+            window.sessionStorage.setItem("config", JSON.stringify(res.data));
         })
         getUserInfo().then(res => {
             this.setState({ user: res.data.Data });

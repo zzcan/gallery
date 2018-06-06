@@ -18,6 +18,11 @@ axios.interceptors.request.use(config => {
 // 添加响应拦截器
 axios.interceptors.response.use(response => {
     // 对响应数据做点什么
+    //未登录
+    if(response.data.Code === 403) {
+        let { Protocol, PassPortDomain, GalleryDomain } = JSON.parse(window.sessionStorage.getItem("config"));
+        window.location.href = `${Protocol}://${PassPortDomain}?ReturnUrl=${Protocol}://${GalleryDomain}`;
+    }
     if(response.config.url !== '/ConfigAppsetting/GetConfig' && response.config.url !== '/image/getUserInfo') {
         if(response.data.Code === 304) {
             window.sessionStorage.setItem("userChange", 'change');
