@@ -22,10 +22,21 @@ import {
     Row,
     Col,
 } from 'antd';
-import axios from 'axios';
 import { CopyToClipboard } from 'react-copy-to-clipboard';   //复制到剪切板插件
 import './css/App.css';
-const qs = require('qs');
+import {
+    getCategory,
+    getSpace,
+    getList,
+    getPicInfo,
+    addCategory,
+    categoryRename,
+    picRename,
+    delCategory,
+    moveCategory,
+    delPic,
+    uploadWebImg
+} from './api';
 const { Header, Sider, Content } = Layout;
 
 class App extends Component {
@@ -37,7 +48,6 @@ class App extends Component {
             loading: true,  //全局loading
             listLoading: false, //列表加载loading
 
-            user: {},
             categories: [],  //分组列表
             capacity: {},
 
@@ -75,39 +85,34 @@ class App extends Component {
                 description: '系统检测到当前登录账号发生变更，请确认无误后进行数据操作。'
             });
         }
-        this.getUserInfo().then(res => {
+        getSpace().then(res => {
             if (res.data.Code === 0) {
-                this.setState({ user: res.data.Data });
-                this.getSpace().then(res => {
-                    if (res.data.Code === 0) {
-                        this.setState({ capacity: res.data.Data });
-                    }
-                })
-                this.getCategory().then(res => {
-                    if (res.data.Code === 0) {
-                        const { categoryName, id } = res.data.Data[0];
-                        this.setState({
-                            categories: res.data.Data,
-                            selectedCategory: { categoryName, id }
-                        }, () => {
-                            //判断列表一行显示的图片个数
-                            const wrapperWidth = this.refs.picWrapper.clientWidth;
-                            const marginLeft = 20;
-                            const picItemWidth = 180;
-                            let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft));
-                            this.setState({ pageSize: 4 * i, initPageSize: 4 * i });
-                            this.getList({ categoryId: id, pageIndex: 1, pageSize: 4 * i, sortParameter: this.state.sortParameter }).then(res => {
-                                if (res.data.Code === 0) {
-                                    this.setState({
-                                        loading: false,
-                                        imgList: res.data.Data.data,
-                                        imgTotal: res.data.Data.total,
-                                    });
-                                }
-                            })
-                        });
-                    }
-                })
+                this.setState({ capacity: res.data.Data });
+            }
+        })
+        getCategory().then(res => {
+            if (res.data.Code === 0) {
+                const { categoryName, id } = res.data.Data[0];
+                this.setState({
+                    categories: res.data.Data,
+                    selectedCategory: { categoryName, id }
+                }, () => {
+                    //判断列表一行显示的图片个数
+                    const wrapperWidth = this.refs.picWrapper.clientWidth;
+                    const marginLeft = 20;
+                    const picItemWidth = 180;
+                    let i = Math.floor((wrapperWidth + marginLeft) / (picItemWidth + marginLeft));
+                    this.setState({ pageSize: 4 * i, initPageSize: 4 * i });
+                    getList({ categoryId: id, pageIndex: 1, pageSize: 4 * i, sortParameter: this.state.sortParameter }).then(res => {
+                        if (res.data.Code === 0) {
+                            this.setState({
+                                loading: false,
+                                imgList: res.data.Data.data,
+                                imgTotal: res.data.Data.total,
+                            });
+                        }
+                    })
+                });
             }
         })
     }
@@ -123,7 +128,7 @@ class App extends Component {
             listLoading: true,
             selectListIds: [],
         });
-        this.getList({ categoryId: id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+        getList({ categoryId: id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             this.setState({ listLoading: false });
             if (res.data.Code === 0) {
                 this.setState({
@@ -163,7 +168,7 @@ class App extends Component {
             return;
         }
         this.setState({ confirmLoading: true });
-        this.addCategory({ categoryName: iptCategoryName }).then(res => {
+        addCategory({ categoryName: iptCategoryName }).then(res => {
             if (res.data.Code === 0) {
                 this.handleCancel('addModal');
                 this.setState({
@@ -201,7 +206,7 @@ class App extends Component {
             return;
         }
         this.setState({ confirmLoading: true });
-        this.categoryRename({ id, name: iptCateName }).then(res => {
+        categoryRename({ id, name: iptCateName }).then(res => {
             if (res.data.Code === 0) {
                 const { categoryId, categoryName } = res.data.Data;
                 categories.forEach(v => {
@@ -246,7 +251,7 @@ class App extends Component {
         let { iptPicName, imgList } = this.state;
         if (!iptPicName) return message.error('请输入图片名!');
         this.setState({ confirmLoading: true });
-        this.picRename({ id, name: iptPicName }).then(res => {
+        picRename({ id, name: iptPicName }).then(res => {
             if (res.data.Code === 0) {
                 message.success('修改图片名称成功!');
                 imgList.forEach(v => {
@@ -279,7 +284,7 @@ class App extends Component {
             return;
         }
         this.setState({ confirmLoading: true })
-        this.delCategory({ categoryId: id }).then(res => {
+        delCategory({ categoryId: id }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     categories: categories.filter(v => v.id !== id),
@@ -288,7 +293,7 @@ class App extends Component {
                     confirmLoading: false,
                 });
                 message.success('删除分组成功！')
-                return this.getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: initPageSize, sortParameter });
+                return getList({ categoryId: categories[0].id, pageIndex: 1, pageSize: initPageSize, sortParameter });
             }else {
                 message.error('删除分组失败！')
             }
@@ -311,7 +316,7 @@ class App extends Component {
     handleSearchPic(value) {
         const { selectedCategory, initPageSize, sortParameter } = this.state;
         this.setState({ listLoading: true });
-        this.getList({ categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+        getList({ categoryId: selectedCategory.id, searchName: value, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
@@ -378,7 +383,7 @@ class App extends Component {
     handleListEnter(e, pic) {
         let { imgList } = this.state;
         if (pic.ossPath === undefined) {
-            this.getPicInfo(pic.path, { 'x-oss-process': 'image/info' }).then(res => {
+            getPicInfo(pic.path, { 'x-oss-process': 'image/info' }).then(res => {
                 if (res.data && res.data.ImageWidth) {
                     let ossSize = ["60", "80", "85", "100", "150", "160", "200", "300", "320", "450", "640"];
                     let ossPath = '';
@@ -462,17 +467,17 @@ class App extends Component {
             return;
         }
         this.setState({ confirmLoading: true });
-        this.moveCategory({ categoryId: movedCategoryId, ids: selectListIds.join(',') }).then(res => {
+        moveCategory({ categoryId: movedCategoryId, ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
                 message.success('修改分组成功!');
-                this.getCategory().then(res => {
+                getCategory().then(res => {
                     if (res.data.Code === 0) {
                         const { categoryName, id } = res.data.Data[0];
                         this.setState({
                             categories: res.data.Data,
                             selectedCategory
                         });
-                        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                        getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
                             if (res.data.Code === 0) {
                                 this.setState({
                                     imgList: res.data.Data.data,
@@ -501,17 +506,17 @@ class App extends Component {
         const { selectListIds, selectedCategory, pageIndex, initPageSize, sortParameter } = this.state;
         // 批量删除且并未有任何图片选中
         if (!selectListIds.length) return message.error('请选择需要删除的图片');
-        this.delPic({ ids: selectListIds.join(',') }).then(res => {
+        delPic({ ids: selectListIds.join(',') }).then(res => {
             if (res.data.Code === 0) {
                 message.success('删除图片成功!');
-                this.getCategory().then(res => {
+                getCategory().then(res => {
                     if (res.data.Code === 0) {
                         const { categoryName, id } = res.data.Data[0];
                         this.setState({
                             categories: res.data.Data,
                             selectedCategory
                         });
-                        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                        getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
                             if (res.data.Code === 0) {
                                 this.setState({
                                     imgList: res.data.Data.data,
@@ -577,7 +582,7 @@ class App extends Component {
             }
         }
         this.setState({ listLoading: true });
-        this.getList({ categoryId: selectedCategory.id, ...options[type], sortParameter }).then(res => {
+        getList({ categoryId: selectedCategory.id, ...options[type], sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
@@ -596,9 +601,9 @@ class App extends Component {
             message.error('请输入需要提取的网络图片!');
             return;
         }
-        this.uploadWebImg({ imgSrc: webImg, categoryId: selectedCategory.id }).then(res => {
+        uploadWebImg({ imgSrc: webImg, categoryId: selectedCategory.id }).then(res => {
             if (res.data.Code === 0) {
-                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
                     if (res.data.Code === 0) {
                         message.success('上传成功!');
                         this.setState({
@@ -638,7 +643,7 @@ class App extends Component {
     handleImgRemove(file) {
         const { response } = file;
         if (response && response.Code === 0) {
-            this.delPic({ ids: [response.Data.id] })
+            delPic({ ids: [response.Data.id] })
         }
     }
     // 上传图片弹窗取消按钮操作
@@ -650,7 +655,7 @@ class App extends Component {
                 if (file.response && file.response.Code === 0) ids.push(file.response.Data);
             })
             if (ids.length > 0) {
-                this.delPic({ ids: ids.join(',') });
+                delPic({ ids: ids.join(',') });
             }
         }
         this.setState({
@@ -659,14 +664,14 @@ class App extends Component {
             allChecked: false,
             selectListIds: [],
         });
-        this.getCategory().then(res => {
+        getCategory().then(res => {
             if (res.data.Code === 0) {
                 const { categoryName, id } = res.data.Data[0];
                 this.setState({
                     categories: res.data.Data,
                     selectedCategory
                 });
-                this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+                getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
                     if (res.data.Code === 0) {
                         this.setState({
                             imgList: res.data.Data.data,
@@ -718,7 +723,7 @@ class App extends Component {
             sortParameter,
             listLoading: true,
         })
-        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+        getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
@@ -742,7 +747,7 @@ class App extends Component {
             listLoading: true,
         })
         // categoryId, searchName 可选, pageIndex, pageSize, sortParameter
-        this.getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
+        getList({ categoryId: selectedCategory.id, pageIndex: 1, pageSize: initPageSize, sortParameter }).then(res => {
             if (res.data.Code === 0) {
                 this.setState({
                     imgList: res.data.Data.data,
@@ -761,126 +766,17 @@ class App extends Component {
         }
     }
     handleExpand() {
-        window.sessionStorage.removeItem("userId");
         window.location.href = `${this.props.Protocol}://${this.props.SellerDomain}`
     }
     // 退出
     handleSigout() {
-        window.sessionStorage.removeItem("userId");
         window.location.href = `${this.props.Protocol}://${this.props.PassPortDomain}/Sigout`
-    }
-    // 获取用户信息
-    getUserInfo() {
-        return axios.get('/image/getUserInfo', {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    // 获取分组
-    getCategory(options) {
-        return axios.get('/image/getCategory', {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    // 获取容量信息
-    getSpace(options) {
-        return axios.get('/image/getSpace', {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 获取图片列表
-     * sortParameter  desc降序 asc升序  默认CreateTime_desc
-     * CreateTime 创建时间
-     * DisplayName 图片名称
-     * UpdateTime  修改时间
-     * FileSize 图片大小
-     * @param {categoryId, searchName 可选, pageIndex, pageSize, sortParameter} options 
-     */
-    getList(options) {
-        return axios.get('/image/getList', {
-            params: options,
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 获取oss图片信息
-     * @param {categoryId, searchName 可选, pageIndex, pageSize} options 
-     */
-    getPicInfo(url, options) {
-        return axios.get(url, {
-            params: options,
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 添加分组
-     * @param {categoryName} options 
-     */
-    addCategory(options) {
-        return axios.post('/image/addCategory', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 修改分组名
-     * @param {id, name} options 
-     */
-    categoryRename(options) {
-        return axios.post('/image/categoryRename', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-    * 修改分组名
-    * @param {ids,name} options 
-    */
-    picRename(options) {
-        return axios.post('/image/picRename', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 删除分组
-     * @param {categoryId} options 
-     */
-    delCategory(options) {
-        return axios.post('/image/delCategory', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 移动图片至新分组
-     * @param {categoryId 新分组id, id 图片id} options 
-     */
-    moveCategory(options) {
-        return axios.post('/image/moveCategory', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 删除图片
-     * @param {ids图片id数组} options 
-     */
-    delPic(options) {
-        return axios.post('/image/delPic', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
-    }
-    /**
-     * 上传网络图片
-     * @param {imgSrc 网络图片路径} options 
-     */
-    uploadWebImg(options) {
-        return axios.post('/image/uploadWebImg', qs.stringify(options), {
-            headers: { 'FormsCookieName': this.props.FormsCookieName }
-        });
     }
     render() {
         const {
             loading,
             listLoading,
             categories,
-            user,
             capacity,
             pageIndex,
             pageSize,
@@ -906,6 +802,7 @@ class App extends Component {
             addCatePopoverVisible,
             initPageSize
         } = this.state;
+        const { user } = this.props;
         const pageSizeOptions = [`${initPageSize * 1}`, `${initPageSize * 2}`, `${initPageSize * 3}`]
         return (
             <Layout className="basic-layout">
@@ -923,7 +820,7 @@ class App extends Component {
                                 :
                                 <Avatar size="small" icon="user" />
                         }
-                        <span className="user-name color-26">{user.name || ''}</span>
+                        <span className="user-name color-26">{user.name}</span>
                         <span className="sign-out" onClick={() => this.handleSigout()}>退出</span>
                     </div>
                 </Header>
