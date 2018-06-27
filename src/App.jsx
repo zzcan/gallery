@@ -389,7 +389,7 @@ class App extends Component {
                     let ossPath = '';
                     let value = res.data.ImageWidth.value;
                     if (ossSize.includes(value)) {
-                        ossPath = `${pic.path}?x-oss-process=style/${res.data.ImageWidth.value}`
+                        ossPath = `${pic.copyPath}?x-oss-process=style/${res.data.ImageWidth.value}`
                     } else {
                         value = +value;
                         let MAXS = ossSize.filter(v => v > value);
@@ -408,7 +408,7 @@ class App extends Component {
                         } else if (MAXS.length && !MINS.length) {
                             newValue = MAXS[0];
                         }
-                        ossPath = `${pic.path}?x-oss-process=style/${newValue}`
+                        ossPath = `${pic.copyPath}?x-oss-process=style/${newValue}`
                     }
                     imgList.forEach(v => {
                         if (v.id === pic.id) v.ossPath = ossPath;
@@ -417,7 +417,7 @@ class App extends Component {
                 }
             }).catch(err => {
                 imgList.forEach(v => {
-                    if (v.id === pic.id) v.ossPath = pic.path;
+                    if (v.id === pic.id) v.ossPath = pic.copyPath;
                 })
                 this.setState({ imgList });
             });
