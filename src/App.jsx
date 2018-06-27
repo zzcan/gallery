@@ -1047,7 +1047,7 @@ class App extends Component {
                                                     null
                                             }
                                             <div className="pic-box" onClick={e => this.handleListClick(item.id)}>
-                                                <img src={`${item.path}?x-oss-process=style/150`} alt="" />
+                                                <img src={`${item.path}?random=${Math.random() * 10000}&x-oss-process=style/150`} alt="" />
                                             </div>
                                             {
                                                 item.isMouseEnter ?
