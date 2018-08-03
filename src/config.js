@@ -39,5 +39,8 @@ axios.interceptors.response.use(response => {
     if(error.response.status === 404) {
         message.error('网络错误！')
     }
+    if(error.response.status === 700 ) {
+        message.warning('您上传的图片涉嫌违规');
+    }
     return Promise.reject(error);
 });

@@ -633,6 +633,9 @@ class App extends Component {
     }
     // 图片上传改变的状态
     handleUploadChange(info) {
+        if (info.file.status === 'error' && info.file.error.status === 700) {
+            message.warning('您上传的图片涉嫌违规');
+        }
         let fileList = info.fileList;
         fileList = fileList.filter(v => {
             return !!v.status;
@@ -685,6 +688,7 @@ class App extends Component {
     }
     // 图片替换
     handleReplacePic({ file }) {
+        
         if (file.response && file.response.Code === 0) {
             message.success('图片替换成功！')
             const { imgList } = this.state;
@@ -698,8 +702,12 @@ class App extends Component {
             });
             this.setState({ imgList: newImgList })
         } else if (file.response && file.response.Code !== 0) {
-            message.error('图片替换失败！');
-        }
+            if (file.status === 'error' && file.error.status === 700){
+                message.warning('您上传的图片涉嫌违规');
+            } else {
+                message.error('图片替换失败！');
+            }
+        } 
     }
     handleReplaceImg(id) {
         const { selectedCategory } = this.state;
